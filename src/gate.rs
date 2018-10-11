@@ -46,7 +46,6 @@ macro_rules! new_gate {
         {
             let mut new = And{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -54,7 +53,6 @@ macro_rules! new_gate {
         {
             let mut new = Or{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -62,7 +60,6 @@ macro_rules! new_gate {
         {
             let mut new = Xor{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -70,7 +67,6 @@ macro_rules! new_gate {
         {
             let mut new = Not{i1: $i1, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -78,7 +74,6 @@ macro_rules! new_gate {
         {
             let mut new = Nand{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -86,7 +81,6 @@ macro_rules! new_gate {
         {
             let mut new = Nor{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -94,7 +88,6 @@ macro_rules! new_gate {
         {
             let mut new = Nxor{i1: $i1, i2: $i2, output: None};
             new.update_inputs();
-            new.eval();
             new
         }
     };
@@ -160,70 +153,117 @@ impl<'a> Gate<'a> {
         }
     }
 
-    pub(crate) fn eval(&mut self) {
+    pub(crate) fn eval(self) -> Gate<'a> {
         match self {
             And{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(i1.unwrap().get_output().unwrap() && i2.unwrap().get_output().unwrap());
+                    And{i1, i2, output: Some(i1.unwrap().get_output().unwrap() && i2.unwrap()
+                            .get_output().unwrap())}
                 }
             },
             Or{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    Or{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    Or{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(i1.unwrap().get_output().unwrap() || i2.unwrap().get_output().unwrap());
+                    Or{i1, i2, output: Some(i1.unwrap().get_output().unwrap() || i2.unwrap()
+                            .get_output().unwrap())}
                 }
             },
             Xor{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    Xor{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    Xor{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(i1.unwrap().get_output().unwrap() != i2.unwrap().get_output().unwrap());
+                    Xor{i1, i2, output: Some(i1.unwrap().get_output().unwrap() != i2.unwrap()
+                            .get_output().unwrap())}
                 }
             },
             Not{i1, output} => {
                 if i1.is_none() {
-                    *output = None;
+                    Not{i1: i1, output: None}
                 } else if i1.unwrap().get_output().is_none() {
-                    *output = None;
+                    Not{i1: i1, output: None}
                 } else {
-                    *output = Some(!i1.unwrap().get_output().unwrap());
+                    Not{i1, output: Some(!i1.unwrap().get_output().unwrap())}
                 }
             },
             Nand{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(!(i1.unwrap().get_output().unwrap() && i2.unwrap().get_output().unwrap()));
+                    And{i1, i2, output: Some(!(i1.unwrap().get_output().unwrap() && i2.unwrap()
+                            .get_output().unwrap()))}
                 }
             },
             Nor{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    And{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(!(i1.unwrap().get_output().unwrap() || i2.unwrap().get_output().unwrap()));
+                    And{i1, i2, output: Some(!(i1.unwrap().get_output().unwrap() || i2.unwrap()
+                            .get_output().unwrap()))}
                 }
             },
             Nxor{i1, i2, output} => {
                 if i1.is_none() || i2.is_none() {
-                    *output = None;
+                    Xor{i1: i1, i2: i2, output: None}
                 } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    *output = None;
+                    Xor{i1: i1, i2: i2, output: None}
                 } else {
-                    *output = Some(!(i1.unwrap().get_output().unwrap() != i2.unwrap().get_output().unwrap()));
+                    Xor{i1, i2, output: Some(i1.unwrap().get_output().unwrap() == i2.unwrap()
+                            .get_output().unwrap())}
                 }
+            },
+            _ => self
+        }
+    }
+
+    unsafe fn set_output(&self, v: Option<bool>) {
+        match self {
+            And{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Or{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Xor{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Not{i1, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Nand{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Nor{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
+            },
+            Nxor{i1, i2, output} => {
+                let output_ptr = output as *const Option<bool>;
+                let output_ptr = output_ptr as *mut Option<bool>;
+                *output_ptr = v;
             },
             _ => {}
         }
