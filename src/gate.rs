@@ -1,109 +1,47 @@
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum Gate<'a> {
+pub(crate) enum Gate {
     And {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
     Or {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
     Xor {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
     Not {
-        i1: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
         output: Option<bool>
     },
     Nand {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
     Nor {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
-    Nxor {
-        i1: Option<&'a Gate<'a>>,
-        i2: Option<&'a Gate<'a>>,
+    Xnor {
+        i1: Option<usize>,
+        i2: Option<usize>,
         output: Option<bool>
     },
     Source {
         output: bool
-    }
+    },
 }
 
 use self::Gate::*;
 
-macro_rules! new_gate {
-    (AND $i1:expr, $i2:expr) => {
-        {
-            let mut new = And{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (OR $i1:expr, $i2:expr) => {
-        {
-            let mut new = Or{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (XOR $i1:expr, $i2:expr) => {
-        {
-            let mut new = Xor{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (NOT $i1:expr) => {
-        {
-            let mut new = Not{i1: $i1, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (NAND $i1:expr, $i2:expr) => {
-        {
-            let mut new = Nand{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (NOR $i1:expr, $i2:expr) => {
-        {
-            let mut new = Nor{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (NXOR $i1:expr, $i2:expr) => {
-        {
-            let mut new = Nxor{i1: $i1, i2: $i2, output: None};
-            new.update_inputs();
-            new.eval();
-            new
-        }
-    };
-    (SOURCE $val:expr) => {
-        Source{output: $val}
-    };
-}
-
-impl<'a> Gate<'a> {
+impl Gate{
     // Checks to see if the input(s) are both Some(ref). If they are, the output is set to the
     // default value (false).
     pub(crate) fn update_inputs(&mut self) {
@@ -138,7 +76,7 @@ impl<'a> Gate<'a> {
                     *output = Some(false);
                 }
             },
-            Nxor{i1, i2, output} => {
+            Xnor{i1, i2, output} => {
                 if i1.is_some() || i2.is_some() {
                     *output = Some(false);
                 }
@@ -155,166 +93,159 @@ impl<'a> Gate<'a> {
             Not{i1, output} => *output,
             Nand{i1, i2, output} => *output,
             Nor{i1, i2, output} => *output,
-            Nxor{i1, i2, output} => *output,
+            Xnor{i1, i2, output} => *output,
             Source{output} => Some(*output)
         }
     }
 
-    pub(crate) fn eval(&self) {
+    pub(crate) fn get_i1(&self) -> Option<usize> {
         match self {
-            And{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(i1.unwrap().get_output().unwrap() && i2.unwrap()
-                            .get_output().unwrap()));
-                    }
-                }
-            },
-            Or{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(i1.unwrap().get_output().unwrap() || i2.unwrap()
-                            .get_output().unwrap()));
-                    }
-                }
-            },
-            Xor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(i1.unwrap().get_output().unwrap() != i2.unwrap()
-                            .get_output().unwrap()));
-                    }
-                }
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i1
             },
             Not{i1, output} => {
-                if i1.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(!i1.unwrap().get_output().unwrap()));
-                    }
-                }
+                *i1
             },
-            Nand{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(!(i1.unwrap().get_output().unwrap() && i2.unwrap()
-                            .get_output().unwrap())));
-                    }
-                }
+            _ => None
+        }
+    }
+
+    pub(crate) fn get_i2(&self) -> Option<usize> {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i2
             },
-            Nor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(!(i1.unwrap().get_output().unwrap() || i2.unwrap()
-                            .get_output().unwrap())));
-                    }
-                }
+            _ => None
+        }
+    }
+
+    pub(crate) fn connect_i1(&mut self, t: usize) {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i1 = Some(t);
             },
-            Nxor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else if i1.unwrap().get_output().is_none() || i2.unwrap().get_output().is_none() {
-                    unsafe {
-                        self.set_output(None);
-                    }
-                } else {
-                    unsafe {
-                        self.set_output(Some(i1.unwrap().get_output().unwrap() == i2.unwrap()
-                            .get_output().unwrap()));
-                    }
-                }
+            Not{i1, output} => {
+                *i1 = Some(t);
             },
             _ => {}
         }
     }
 
-    unsafe fn set_output(&self, v: Option<bool>) {
+    pub(crate) fn connect_i2(&mut self, t: usize) {
         match self {
-            And{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Or{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Xor{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Not{i1, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Nand{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Nor{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
-            },
-            Nxor{i1, i2, output} => {
-                let output_ptr = output as *const Option<bool>;
-                let output_ptr = output_ptr as *mut Option<bool>;
-                *output_ptr = v;
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i2 = Some(t);
             },
             _ => {}
         }
+    }
+
+    pub(crate) fn disconnect_i1(&mut self) {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i1 = None;
+            },
+            Not{i1, output} => {
+                *i1 = None;
+            },
+            _ => {}
+        }
+    }
+
+    pub(crate) fn disconnect_i2(&mut self) {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {
+                *i2 = None;
+            },
+            _ => {}
+        }
+    }
+
+    pub(crate) fn set_high(&mut self) {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {},
+            Not{i1, output} => {},
+            Source{output} => *output = true
+        }
+    }
+
+    pub(crate) fn set_low(&mut self) {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => {},
+            Not{i1, output} => {},
+            Source{output} => *output = false
+        }
+    }
+
+    pub(crate) fn new_and() -> Self {
+        And{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_or() -> Self {
+        Or{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_xor() -> Self {
+        Xor{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_not() -> Self {
+        Not{i1: None, output: None}
+    }
+
+    pub(crate) fn new_nand() -> Self {
+        Nand{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_nor() -> Self {
+        Nor{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_xnor() -> Self {
+        Xnor{i1: None, i2: None, output: None}
+    }
+
+    pub(crate) fn new_source() -> Self {
+        Source{output: false}
     }
 }

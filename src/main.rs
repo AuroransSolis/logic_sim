@@ -1,19 +1,27 @@
 #![allow(dead_code, unused_variables)]
 
-#[macro_use] pub(crate) mod gate;
+pub mod gate;
+pub mod circuit;
 
-use self::gate::Gate::*;
+pub(crate) use self::gate::Gate;
+pub(crate) use self::circuit::Circuit;
 
 fn main() {
-    let high_source = new_gate!(SOURCE true);
-    let low_source = new_gate!(SOURCE false);
-    let gate_1 = new_gate!(AND Some(&high_source), Some(&low_source)); // 0
-    let gate_2 = new_gate!(XOR Some(&high_source), Some(&gate_1)); // 1
-    let gate_3 = new_gate!(NOR Some(&gate_1), Some(&gate_2)); // 0
-    let gate_1 = gate_1.eval();
-    let gate_2 = gate_2.eval();
-    let gate_3 = gate_3.eval();
-    println!("Gate 1: {:?}", gate_1.get_output());
-    println!("Gate 2: {:?}", gate_2.get_output());
-    println!("Gate 3: {:?}", gate_3.get_output());
+    let mut circuit = Circuit::new();
+    circuit.add_gate(Gate::new_source());
+    circuit.set_high(0);
+    circuit.add_gate(Gate::new_source());
+    circuit.add_gate(Gate::new_and());
+    circuit.connect_i1(2, 0);
+    circuit.connect_i2(2, 1);
+    circuit.add_gate(Gate::new_xor());
+    circuit.connect_i1(3, 0);
+    circuit.connect_i2(3, 2);
+    circuit.add_gate(Gate::new_nor());
+    circuit.connect_i1(4, 2);
+    circuit.connect_i2(4, 3);
+    circuit.eval();
+    println!("Gate 1: {:?}", circuit.get_output(2));
+    println!("Gate 2: {:?}", circuit.get_output(3));
+    println!("Gate 3: {:?}", circuit.get_output(4));
 }
