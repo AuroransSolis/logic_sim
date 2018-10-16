@@ -41,50 +41,7 @@ pub(crate) enum Gate {
 
 use self::Gate::*;
 
-impl Gate{
-    // Checks to see if the input(s) are both Some(ref). If they are, the output is set to the
-    // default value (false).
-    pub(crate) fn update_inputs(&mut self) {
-        match self {
-            And{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Or{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Xor{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Not{i1, output} => {
-                if i1.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Nand{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Nor{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            Xnor{i1, i2, output} => {
-                if i1.is_some() || i2.is_some() {
-                    *output = Some(false);
-                }
-            },
-            _ => {}
-        }
-    }
-
+impl Gate {
     pub(crate) fn get_output(&self) -> Option<bool> {
         match self {
             And{i1, i2, output} => *output,
