@@ -217,5 +217,8 @@ impl Circuit {
         for g in 0..self.gates.len() {
             self.eval(g);
         }
+        for g in 0..self.gates.len() {
+            self.eval(g);
+        }
     }
 }
