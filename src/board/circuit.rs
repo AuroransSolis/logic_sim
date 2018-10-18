@@ -1,7 +1,7 @@
 use std::ops::Index;
 use std::ops::IndexMut;
 
-use gate::Gate::{self, *};
+use board::gate::Gate::{self, *};
 
 #[derive(Debug)]
 pub(crate) struct Circuit {

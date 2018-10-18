@@ -1,10 +1,9 @@
 #![allow(dead_code, unused_variables)]
 
-pub mod gate;
-pub mod circuit;
+pub mod board;
 
-pub(crate) use self::gate::Gate;
-pub(crate) use self::circuit::Circuit;
+pub(crate) use board::gate::Gate;
+pub(crate) use board::circuit::Circuit;
 
 fn main() {
     let mut circuit = Circuit::new();
