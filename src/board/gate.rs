@@ -1,41 +1,41 @@
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum Gate {
     And {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Or {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Xor {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Not {
-        i1: Option<usize>,
+        i1: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Nand {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Nor {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Xnor {
-        i1: Option<usize>,
-        i2: Option<usize>,
+        i1: Option<*const Option<bool>>,
+        i2: Option<*const Option<bool>>,
         output: Option<bool>
     },
     Source {
-        output: bool
+        output: Option<bool>
     },
 }
 
@@ -44,18 +44,31 @@ use self::Gate::*;
 impl Gate {
     pub(crate) fn get_output(&self) -> Option<bool> {
         match self {
-            And{i1, i2, output} => *output,
-            Or{i1, i2, output} => *output,
-            Xor{i1, i2, output} => *output,
-            Not{i1, output} => *output,
-            Nand{i1, i2, output} => *output,
-            Nor{i1, i2, output} => *output,
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
             Xnor{i1, i2, output} => *output,
-            Source{output} => Some(*output)
+            Not{i1, output} => *output,
+            Source{output} => *output
         }
     }
 
-    pub(crate) fn get_i1(&self) -> Option<usize> {
+    pub(crate) fn get_output_ptr(&self) -> *const Option<bool> {
+        match self {
+            And{i1, i2, output} |
+            Or{i1, i2, output} |
+            Xor{i1, i2, output} |
+            Nand{i1, i2, output} |
+            Nor{i1, i2, output} |
+            Xnor{i1, i2, output} => output,
+            Not{i1, output} => output,
+            Source{output} => output
+        }
+    }
+
+    pub(crate) fn get_i1(&self) -> Option<*const Option<bool>> {
         match self {
             And{i1, i2, output} |
             Or{i1, i2, output} |
@@ -72,7 +85,7 @@ impl Gate {
         }
     }
 
-    pub(crate) fn get_i2(&self) -> Option<usize> {
+    pub(crate) fn get_i2(&self) -> Option<*const Option<bool>> {
         match self {
             And{i1, i2, output} |
             Or{i1, i2, output} |
@@ -86,7 +99,7 @@ impl Gate {
         }
     }
 
-    pub(crate) fn connect_i1(&mut self, t: usize) {
+    pub(crate) fn connect_i1(&mut self, t: *const Option<bool>) {
         match self {
             And{i1, i2, output} |
             Or{i1, i2, output} |
@@ -103,7 +116,7 @@ impl Gate {
         }
     }
 
-    pub(crate) fn connect_i2(&mut self, t: usize) {
+    pub(crate) fn connect_i2(&mut self, t: *const Option<bool>) {
         match self {
             And{i1, i2, output} |
             Or{i1, i2, output} |
@@ -157,7 +170,7 @@ impl Gate {
             Nor{i1, i2, output} |
             Xnor{i1, i2, output} => {},
             Not{i1, output} => {},
-            Source{output} => *output = true
+            Source{output} => *output = Some(true)
         }
     }
 
@@ -170,7 +183,7 @@ impl Gate {
             Nor{i1, i2, output} |
             Xnor{i1, i2, output} => {},
             Not{i1, output} => {},
-            Source{output} => *output = false
+            Source{output} => *output = Some(false)
         }
     }
 
@@ -203,6 +216,6 @@ impl Gate {
     }
 
     pub(crate) fn new_source() -> Self {
-        Source{output: false}
+        Source{output: Some(false)}
     }
 }

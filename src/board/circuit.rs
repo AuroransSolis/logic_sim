@@ -1,5 +1,4 @@
-use std::ops::Index;
-use std::ops::IndexMut;
+use std::ops::{Index, IndexMut};
 
 use board::gate::Gate::{self, *};
 
@@ -36,11 +35,23 @@ impl Circuit {
     }
 
     pub(crate) fn connect_i1(&mut self, target_gate: usize, tool_gate: usize) {
-        self[target_gate].connect_i1(tool_gate);
+        let ptr = self[tool_gate].get_output_ptr();
+        self[target_gate].connect_i1(ptr);
+    }
+
+    pub(crate) fn connect_i1_ptr(&mut self, target_gate: usize,
+        tool_gate_output_ptr: *const Option<bool>) {
+        self[target_gate].connect_i1(tool_gate_output_ptr);
     }
 
     pub(crate) fn connect_i2(&mut self, target_gate: usize, tool_gate: usize) {
-        self[target_gate].connect_i2(tool_gate);
+        let ptr = self[tool_gate].get_output_ptr();
+        self[target_gate].connect_i2(ptr);
+    }
+
+    pub(crate) fn connect_i2_ptr(&mut self, target_gate: usize,
+        tool_gate_output_ptr: *const Option<bool>) {
+        self[target_gate].connect_i2(tool_gate_output_ptr);
     }
 
     pub(crate) fn disconnect_i1(&mut self, g: usize) {
@@ -62,63 +73,89 @@ impl Circuit {
     pub(crate) fn get_output(&self, g: usize) -> Option<bool> {
         self[g].get_output()
     }
+
+    pub(crate) fn get_output_ptr(&self, g: usize) -> *const Option<bool> {
+        self[g].get_output_ptr()
+    }
     
     // Checks to see if the input(s) are both Some(ref). If they are, the output is set to the
     // default value (false).
     pub(crate) fn update_inputs(&mut self, g: usize) {
         match self[g] {
             And{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = And{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        } else {
+                            self[g] = And{i1, i2, output: Some(false)};
+                        }
+                    }
                 }
             },
             Or{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = Or{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        }
+                    }
+                } else {
+                    self[g] = Or{i1, i2, output: Some(false)};
                 }
             },
             Xor{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = Xor{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        }
+                    }
+                } else {
+                    self[g] = Xor{i1, i2, output: Some(false)};
                 }
             },
             Nand{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = Nand{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        }
+                    }
+                } else {
+                    self[g] = Nand{i1, i2, output: Some(false)};
                 }
             },
             Nor{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = Nor{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        }
+                    }
+                } else {
+                    self[g] = Nor{i1, i2, output: Some(false)};
                 }
             },
             Xnor{i1, i2, output} => {
-                if i1.is_some() && i2.is_some() && self[i1.unwrap()].get_output().is_some()
-                    && self[i2.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() && i2.is_some() {
-                    self[g] = Xnor{i1, i2, output: Some(false)}
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(_), Some(_)) = (*i1_ptr, *i2_ptr) {
+                            self.eval(g);
+                        }
+                    }
+                } else {
+                    self[g] = Xnor{i1, i2, output: Some(false)};
                 }
             },
             Not{i1, output} => {
-                if i1.is_some() && self[i1.unwrap()].get_output().is_some() {
-                    self.eval(g);
-                } else if i1.is_some() {
+                if let Some(i1_ptr) = i1 {
+                    unsafe {
+                        if let Some(_) = *i1_ptr {
+                            self.eval(g);
+                        }
+                    }
+                } else {
                     self[g] = Not{i1, output: Some(false)};
                 }
             },
@@ -135,78 +172,80 @@ impl Circuit {
     pub(crate) fn eval(&mut self, g: usize) {
         match self[g] {
             And{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = And{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = And{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = And{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = And{i1, i2, output: Some(self[i1.unwrap()].get_output().unwrap()
-                        && self[i2.unwrap()].get_output().unwrap())};
+                    self[g] = And{i1, i2, output: None};
                 }
             },
             Or{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = Or{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = Or{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = Or{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = Or{i1, i2, output: Some(self[i1.unwrap()].get_output().unwrap()
-                        || self[i2.unwrap()].get_output().unwrap())};
+                    self[g] = Or{i1, i2, output: None};
                 }
             },
             Xor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = Xor{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = Xor{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = Xor{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = Xor{i1, i2, output: Some(self[i1.unwrap()].get_output().unwrap()
-                        != self[i2.unwrap()].get_output().unwrap())};
+                    self[g] = Xor{i1, i2, output: None};
                 }
             },
             Not{i1, output} => {
-                if i1.is_none() {
-                    self[g] = Not{i1, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() {
-                    self[g] = Not{i1, output: None};
+                if let Some(i1_ptr) = i1 {
+                    unsafe {
+                        if let Some(b1) = *i1_ptr {
+                            self[g] = Not{i1, output: Some(!b1)};
+                        }
+                    }
                 } else {
-                    self[g] = Not{i1, output: Some(!self[i1.unwrap()].get_output().unwrap())};
+                    self[g] = Not{i1, output: None};
                 }
             },
             Nand{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = Nand{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = Nand{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = Nand{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = Nand{i1, i2, output: Some(!(self[i1.unwrap()].get_output().unwrap()
-                        && self[i2.unwrap()].get_output().unwrap()))};
+                    self[g] = Nand{i1, i2, output: None};
                 }
             },
             Nor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = Nor{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = Nor{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = Nor{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = Nor{i1, i2, output: Some(!(self[i1.unwrap()].get_output().unwrap()
-                        || self[i2.unwrap()].get_output().unwrap()))};
+                    self[g] = Nor{i1, i2, output: None};
                 }
             },
             Xnor{i1, i2, output} => {
-                if i1.is_none() || i2.is_none() {
-                    self[g] = Xnor{i1, i2, output: None};
-                } else if self[i1.unwrap()].get_output().is_none() || self[i2.unwrap()]
-                    .get_output().is_none() {
-                    self[g] = Xnor{i1, i2, output: None};
+                if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
+                    unsafe {
+                        if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
+                            self[g] = Xnor{i1, i2, output: Some(b1 && b2)};
+                        }
+                    }
                 } else {
-                    self[g] = Xnor{i1, i2, output: Some(self[i1.unwrap()].get_output().unwrap()
-                        != self[i2.unwrap()].get_output().unwrap())};
+                    self[g] = Xnor{i1, i2, output: None};
                 }
             },
             _ => {}
@@ -217,8 +256,11 @@ impl Circuit {
         for g in 0..self.gates.len() {
             self.eval(g);
         }
-        for g in 0..self.gates.len() {
-            self.eval(g);
+    }
+
+    pub(crate) fn eval_all_n_passes(&mut self, passes: usize) {
+        for _ in 0..passes {
+            self.eval_all();
         }
     }
 }

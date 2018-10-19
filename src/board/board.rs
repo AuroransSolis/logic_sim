@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use board::{circuit::Circuit, gate::Gate};
 
 #[derive(Copy, Clone)]
@@ -9,31 +11,59 @@ pub(crate) struct C2C {
 }
 
 pub(crate) struct Board {
-    connections: Vec<C2C>,
     circuits: Vec<Circuit>
+}
+
+impl Index<usize> for Board {
+    type Output = Circuit;
+
+    fn index(&self, idx: usize) -> &Circuit {
+        &self.circuits[idx]
+    }
+}
+
+impl IndexMut<usize> for Board {
+    fn index_mut(&mut self, idx: usize) -> &mut Circuit {
+        &mut self.circuits[idx]
+    }
 }
 
 impl Board {
     fn new() -> Self {
         Board {
-            connections: Vec::new(),
             circuits: Vec::new()
         }
     }
 
-    fn add_circuit(&mut self, circuit: Circuit) {
+    fn add_circuit(&mut self, circuit: Circuit) -> usize {
         self.circuits.push(circuit);
+        self.circuits.len() - 1
     }
 
-    fn add_gate(&mut self, circuit: usize, gate: Gate) {
-        self.circuits[circuit].add_gate(gate);
+    fn eval(&mut self, c: usize) {
+        self[c].eval_all();
     }
 
-    fn eval_circuit(&mut self, circuit: usize) {
-        if let Some(pos) = self.connections.iter().position(|&c2c| c2c.source_circuit == circuit) {
-            self.eval_circuit(pos);
-            // How do I now let the gate in the target circuit know what its input from the other circuit is?
+    fn eval_circuit_n_passes(&mut self, c: usize, passes: usize) {
+        self[c].eval_all_n_passes(passes);
+    }
+
+    fn eval_all_n_passes(&mut self, passes: usize) {
+        for c in self.circuits.iter_mut() {
+            c.eval_all_n_passes(passes);
         }
-        self.circuits[circuit].eval_all();
+    }
+
+    fn eval_all_n_passes_n_passes(&mut self, c_passes: usize, g_passes: usize) {
+        for _ in 0..c_passes {
+            for c in self.circuits.iter_mut() {
+                c.eval_all_n_passes(g_passes);
+            }
+        }
+    }
+
+    fn make_inter_circuit_i1_connection(&mut self, c1: usize, g1: usize, c2: usize, g2: usize) {
+        let ptr = self[c2].get_output_ptr(g2);
+        self[c1].connect_i1_ptr(g1, ptr);
     }
 }
