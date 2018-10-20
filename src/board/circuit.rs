@@ -4,7 +4,7 @@ use board::gate::Gate::{self, *};
 
 #[derive(Debug)]
 pub(crate) struct Circuit {
-    gates: Vec<Gate>
+    pub(crate) gates: Vec<Gate>
 }
 
 impl Index<usize> for Circuit {
@@ -186,7 +186,7 @@ impl Circuit {
                 if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
                     unsafe {
                         if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
-                            self[g] = Or{i1, i2, output: Some(b1 && b2)};
+                            self[g] = Or{i1, i2, output: Some(b1 || b2)};
                         }
                     }
                 } else {
@@ -197,7 +197,7 @@ impl Circuit {
                 if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
                     unsafe {
                         if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
-                            self[g] = Xor{i1, i2, output: Some(b1 && b2)};
+                            self[g] = Xor{i1, i2, output: Some(b1 != b2)};
                         }
                     }
                 } else {
@@ -219,7 +219,7 @@ impl Circuit {
                 if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
                     unsafe {
                         if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
-                            self[g] = Nand{i1, i2, output: Some(b1 && b2)};
+                            self[g] = Nand{i1, i2, output: Some(!(b1 && b2))};
                         }
                     }
                 } else {
@@ -230,7 +230,7 @@ impl Circuit {
                 if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
                     unsafe {
                         if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
-                            self[g] = Nor{i1, i2, output: Some(b1 && b2)};
+                            self[g] = Nor{i1, i2, output: Some(!(b1 || b2))};
                         }
                     }
                 } else {
@@ -241,7 +241,7 @@ impl Circuit {
                 if let (Some(i1_ptr), Some(i2_ptr)) = (i1, i2) {
                     unsafe {
                         if let (Some(b1), Some(b2)) = (*i1_ptr, *i2_ptr) {
-                            self[g] = Xnor{i1, i2, output: Some(b1 && b2)};
+                            self[g] = Xnor{i1, i2, output: Some(b1 == b2)};
                         }
                     }
                 } else {
@@ -262,5 +262,26 @@ impl Circuit {
         for _ in 0..passes {
             self.eval_all();
         }
+    }
+    
+    // Marked as unsafe because the user has to guarantee that the 'Circuit' is NOT in a board.
+    // Otherwise, this function can easily leave dangling pointers in other 'Circuit's in the
+    // 'Board'. The only time that this is safe is if the 'Circuit' has NO connections to other
+    // 'Circuit's.
+    pub(crate) unsafe fn remove_gate(&mut self, g: usize) {
+        let ptr = self[g].get_output_ptr();
+        for i in (0..self.gates.len()).filter(|&i| i != g) {
+            if let Some(i1) = self[i].get_i1() {
+                if i1 == ptr {
+                    self[g].disconnect_i1();
+                }
+            }
+            if let Some(i2) = self[i].get_i2() {
+                if i2  == ptr {
+                    self[g].disconnect_i2();
+                }
+            }
+        }
+        self.gates.remove(g);
     }
 }
