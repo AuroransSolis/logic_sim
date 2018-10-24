@@ -2,9 +2,15 @@ use std::ops::{Index, IndexMut};
 
 use board::{circuit::Circuit, gate::Gate};
 
+enum Wire {
+    Intracircuit{target_circuit: usize, target_gate: usize, tool_gate: usize},
+    Intercircuit{target_circuit: usize, target_gate: usize, tool_circuit: usize, tool_gate: usize}
+}
+
 #[derive(Debug)]
 pub(crate) struct Board {
-    circuits: Vec<Circuit>
+    circuits: Vec<Circuit>,
+    //wires: Vec<Wire>
 }
 
 impl Index<usize> for Board {
@@ -24,7 +30,8 @@ impl IndexMut<usize> for Board {
 impl Board {
     pub(crate) fn new() -> Self {
         Board {
-            circuits: Vec::new()
+            circuits: Vec::new(),
+            //wires: Vec::new()
         }
     }
 
@@ -89,7 +96,7 @@ impl Board {
 
     pub(crate) fn remove_circuit(&mut self, target_circuit: usize) {
         for gi in 0..self[target_circuit].gates.len() {
-            let ptr = self[target_circuit][gi].get_output();
+            let ptr = self[target_circuit][gi].get_output_ptr();
             for ci in (0..self.circuits.len()).filter(|&ci| ci != target_circuit) {
                 for other_gi in 0..self[ci].gates.len() {
                     if let Some(i1) = self[ci][other_gi].get_i1() {
