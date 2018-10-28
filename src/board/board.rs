@@ -1,4 +1,6 @@
 use std::ops::{Index, IndexMut};
+use std::rc::Rc;
+use std::cell::Cell;
 
 use board::{circuit::Circuit, gate::Gate};
 
@@ -49,69 +51,62 @@ impl Board {
     }
 
     pub(crate) fn eval_all_n_passes(&mut self, passes: usize) {
-        for (i, c) in self.circuits.iter_mut().enumerate() {
+        for c in &mut self.circuits {
             c.eval_all_n_passes(passes);
         }
     }
 
     pub(crate) fn eval_all_n_passes_n_passes(&mut self, c_passes: usize, g_passes: usize) {
         for _ in 0..c_passes {
-            for c in self.circuits.iter_mut() {
+            for c in &mut self.circuits {
                 c.eval_all_n_passes(g_passes);
             }
         }
     }
 
-    pub(crate) fn make_inter_circuit_i1_connection(&mut self, target_circuit: usize,
-        target_gate: usize, tool_circuit: usize, tool_gate: usize) {
-        let ptr = self[tool_circuit].get_output_ptr(tool_gate);
-        self[target_circuit].connect_i1_ptr(target_gate, ptr);
-    }
-
-    pub(crate) fn make_inter_circuit_i2_connection(&mut self, target_circuit: usize,
-        target_gate: usize, tool_circuit: usize, tool_gate: usize) {
-        let ptr = self[tool_circuit].get_output_ptr(tool_gate);
-        self[target_circuit].connect_i2_ptr(target_gate, ptr);
+    pub(crate) fn make_inter_circuit_i_connection(&mut self, target_circuit: usize,
+        target_gate: usize, target_gate_input: usize, tool_circuit: usize, tool_gate: usize,
+        tool_gate_output: usize) {
+        let output_rcc = self[tool_circuit][tool_gate].get_output_one(tool_gate_output);
+        self[target_circuit][target_gate].set_i_one(target_gate_input, Some(output_rcc));
     }
 
     pub(crate) fn remove_gate(&mut self, target_circuit: usize, target_gate: usize) {
-        let target_ptr = self[target_circuit][target_gate].get_output_ptr();
-        for ci in 0..self.circuits.len() {
-            for gi in (0..self[ci].gates.len())
-                .filter(|&gi| gi != target_gate && ci != target_circuit) {
-                if let Some(i1) = self[ci][gi].get_i1() {
-                    if i1 == target_ptr {
-                        self[ci][gi].disconnect_i1();
-                    }
-                }
-                if let Some(i2) = self[ci][gi].get_i2() {
-                    if i2 == target_ptr {
-                        self[ci][gi].disconnect_i2();
+        let outputs = self[target_circuit][target_gate].get_outputs();
+        unsafe {
+            self[target_circuit].remove_gate(target_gate);
+        }
+        for c in &mut self.circuits {
+            for g in &mut c.gates {
+                let inputs = g.get_inputs_all();
+                for i in 0..inputs.len() {
+                    if let Some(ref input) = inputs[i] {
+                        if outputs.iter().any(|output| Rc::ptr_eq(&input, output)) {
+                            g.set_i_one(i, None);
+                        }
                     }
                 }
             }
         }
-        self[target_circuit].gates.remove(target_gate);
     }
 
     pub(crate) fn remove_circuit(&mut self, target_circuit: usize) {
-        for gi in 0..self[target_circuit].gates.len() {
-            let ptr = self[target_circuit][gi].get_output_ptr();
-            for ci in (0..self.circuits.len()).filter(|&ci| ci != target_circuit) {
-                for other_gi in 0..self[ci].gates.len() {
-                    if let Some(i1) = self[ci][other_gi].get_i1() {
-                        if i1 == ptr {
-                            self[ci][other_gi].disconnect_i1();
-                        }
-                    }
-                    if let Some(i2) = self[ci][other_gi].get_i2() {
-                        if i2 == ptr {
-                            self[ci][other_gi].disconnect_i2();
+        let mut outputs = Vec::new();
+        for g in &self[target_circuit].gates {
+            outputs.append(&mut g.get_outputs());
+        }
+        self.circuits.remove(target_circuit);
+        for c in &mut self.circuits {
+            for g in &mut c.gates {
+                let inputs = g.get_inputs_all();
+                for i in 0..inputs.len() {
+                    if let Some(ref input) = inputs[i] {
+                        if outputs.iter().any(|output| Rc::ptr_eq(&input, output)) {
+                            g.set_i_one(i, None);
                         }
                     }
                 }
             }
         }
-        self.circuits.remove(target_circuit);
     }
 }
