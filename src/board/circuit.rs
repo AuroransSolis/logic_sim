@@ -2,7 +2,7 @@ use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 use std::cell::Cell;
 
-use board::gate::{Gate, Evaluation};
+use board::gate::Gate;
 
 #[derive(Debug)]
 pub(crate) struct Circuit {
@@ -38,17 +38,16 @@ impl Circuit {
 
     pub(crate) fn connect_i_single(&mut self, target_gate: usize, target_gate_input: usize,
         tool_gate: usize, tool_gate_output: usize) {
-        let new_input = self[tool_gate].get_output_one(tool_gate_output);
-        self[target_gate].set_i_one(target_gate_input, Some(new_input));
+        let new_input = self[tool_gate].get_output(tool_gate_output);
+        self[target_gate].set_i(target_gate_input, Some(new_input));
     }
 
     pub(crate) fn disconnect_i_single(&mut self, target_gate: usize, target_gate_input: usize) {
-        self[target_gate].set_i_one(target_gate_input, None);
+        self[target_gate].set_i(target_gate_input, None);
     }
 
     pub(crate) fn update_all_inputs(&mut self,
-        update_function: fn(&Box<[Option<Rc<Cell<Option<Evaluation>>>>]>,
-        &mut Box<[Rc<Cell<Option<Evaluation>>>]>)) {
+        update_function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [Rc<Cell<Option<bool>>>])) {
         for g in 0..self.gates.len() {
             self[g].update_inputs(update_function);
         }
@@ -77,11 +76,11 @@ impl Circuit {
         let outputs = self[g].get_outputs();
         self.gates.remove(g);
         for g in &mut self.gates {
-            let inputs = g.get_inputs_all();
+            let inputs = g.get_inputs();
             for i in 0..inputs.len() {
                 if let &Some(ref input) = &inputs[i] {
                     if outputs.iter().any(|output| Rc::ptr_eq(input, output)) {
-                        g.set_i_one(i, None);
+                        g.set_i(i, None);
                     }
                 }
             }

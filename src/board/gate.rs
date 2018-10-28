@@ -2,57 +2,34 @@ use std::fmt::{self, Debug};
 use std::cell::Cell;
 use std::rc::Rc;
 
-// This is to implement the idea you were talking about, Leslie. You should be able to have a
-// "counter" and if the counter's not up to snuff, then don't use it. Kinda like generational
-// indices, but it's generational booleans. Then you just keep updating until all `Gate`s are
-// have the correct 'num' value
-#[derive(Copy, Clone, Debug)]
-pub(crate) struct Evaluation {
-    result: bool,
-    num: usize
-}
-
-impl Evaluation {
-    pub(crate) fn new(result: bool, num: usize) -> Self {
-        Evaluation {
-            result,
-            num
-        }
-    }
-
-    pub(crate) fn result(&self) -> bool {
-        self.result
-    }
-
-    pub(crate) fn num(&self) -> usize {
-        self.num
-    }
-
-    pub(crate) fn evaluated(&self, check: usize) -> bool {
-        self.num == check
-    }
-}
-
 #[derive(Clone)]
 pub(crate) enum Gate {
+    // This covers your basic gates like AND, OR, XOR, NOT, NAND, NOR, and XNOR. It also covers
+    // other gates like MUXes and DMUXes. What gate 'NoStorage' is is determined by its function.
+    // The number of inputs and outputs should be a fixed amount determined at runtime, hence the
+    // use of 'Box<[T]>'.
     NoStorage {
-        input: Box<[Option<Rc<Cell<Option<Evaluation>>>>]>,
-        function: fn(&[Option<Rc<Cell<Option<Evaluation>>>>], &mut [Rc<Cell<Option<Evaluation>>>]),
-        output: Box<[Rc<Cell<Option<Evaluation>>>]>
+        input: Box<[Option<Rc<Cell<Option<bool>>>>]>,
+        function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [Rc<Cell<Option<bool>>>]),
+        output: Box<[Rc<Cell<Option<bool>>>]>
     },
+    // This covers more complicated gates. What this can do is basically up to your imagination. RAM
+    // modules of arbitrary size are possible, limited only by the amount of memory you're willing
+    // to dedicate to the `Gate`. As for the use of 'Box<[T]>', see the end of the comment for the
+    // 'NoStorage' variant.
     Storage {
-        input: Box<[Option<Rc<Cell<Option<Evaluation>>>>]>,
+        input: Box<[Option<Rc<Cell<Option<bool>>>>]>,
         storage: Box<[bool]>,
-        function: fn(&[Option<Rc<Cell<Option<Evaluation>>>>], &mut [bool],
-            &mut [Rc<Cell<Option<Evaluation>>>]),
-        output: Box<[Rc<Cell<Option<Evaluation>>>]>
+        function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [bool],
+            &mut [Rc<Cell<Option<bool>>>]),
+        output: Box<[Rc<Cell<Option<bool>>>]>
     }
 }
 
 use Gate::*;
 
 impl Debug for Gate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {bb
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             NoStorage{input, function: _, output} => {
                 write!(f, "i: {:?}, output: {:?}", input, output)
@@ -66,88 +43,95 @@ impl Debug for Gate {
 
 impl Gate {
     pub(crate) fn new_ns(num_i: usize, num_o: usize,
-        function: fn(&[Option<Rc<Cell<Option<Evaluation>>>>], &mut [Rc<Cell<Option<Evaluation>>>]))
+        function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [Rc<Cell<Option<bool>>>]))
         -> Self {
         NoStorage {
-            input: vec![None; num_i].into_boxed_slice(),bbbbbbbbbbbbbb
+            input: vec![None; num_i].into_boxed_slice(),
             function,
-            output: vec![Rc::new(Cell::new(None)); num_i].into_boxed_slice()
+            output: vec![Rc::new(Cell::new(None)); num_o].into_boxed_slice()
         }
     }
 
     pub(crate) fn new_s(num_i: usize, amt_storage: usize, num_o: usize,
-        function: fn(&[Option<Rc<Cell<Option<Evaluation>>>>], &mut [bool],
-            &mut [Rc<Cell<Option<Evaluation>>>])) -> Self {
+        function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [bool],
+            &mut [Rc<Cell<Option<bool>>>])) -> Self {
         Storage {
             input: vec![None; num_i].into_boxed_slice(),
             storage: vec![false; amt_storage].into_boxed_slice(),
             function,
-            output: vec![Rc::new(Cell::new(None)); num_i].into_boxed_slice() nn
+            output: vec![Rc::new(Cell::new(None)); num_o].into_boxed_slice()
         }
     }
 
-    pub(crate) fn set_i_all(&mut self, new_i: Vec<Option<Rc<Cell<Option<Evaluation>>>>>) {
-        match self {
-            NoStorage{input, function: _, output: _} => *input = new_i.into_boxed_slice(),
-            Storage{input, storage: _, function: _, output: _} => *input = new_i.into_boxed_slice()
-        }
-    }
-
-    pub(crate) fn set_i_one(&mut self, i_ind: usize, new_i: Option<Rc<Cell<Option<Evaluation>>>>) {
+    pub(crate) fn set_i(&mut self, i_ind: usize, new_i: Option<Rc<Cell<Option<bool>>>>) {
         match self {
             NoStorage{input, function: _, output: _} => input[i_ind] = new_i,
             Storage{input, storage: _, function: _, output: _} => input[i_ind] = new_i
         }
     }
 
-    pub(crate) fn get_input_one(&self, i_ind: usize) -> Option<Rc<Cell<Option<Evaluation>>>> {
+    pub(crate) fn get_input(&self, i_ind: usize) -> Option<Rc<Cell<Option<bool>>>> {
         match self {
             NoStorage{input, function: _, output: _} => input[i_ind].clone(),
             Storage{input, storage: _, function: _, output: _} => input[i_ind].clone()
         }
     }
 
-    pub(crate) fn get_inputs_all(&self) -> Vec<Option<Rc<Cell<Option<Evaluation>>>>> {
+    pub(crate) fn get_inputs(&self) -> Vec<Option<Rc<Cell<Option<bool>>>>> {
         match self {
             NoStorage{input, function: _, output: _} => {
                 input.iter().map(|e| e.clone())
-                    .collect::<Vec<Option<Rc<Cell<Option<Evaluation>>>>>>()
+                    .collect::<Vec<Option<Rc<Cell<Option<bool>>>>>>()
             },
             Storage{input, storage: _, function: _, output: _} => {
                 input.iter().map(|e| e.clone())
-                    .collect::<Vec<Option<Rc<Cell<Option<Evaluation>>>>>>()
+                    .collect::<Vec<Option<Rc<Cell<Option<bool>>>>>>()
             }
         }
     }
 
-    pub(crate) fn get_outputs(&self) -> Vec<Rc<Cell<Option<Evaluation>>>> {
+    pub(crate) fn get_outputs(&self) -> Vec<Rc<Cell<Option<bool>>>> {
         match self {
             NoStorage{input: _, function: _, output} => {
-                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Option<Evaluation>>>>>()
+                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Option<bool>>>>>()
             },
             Storage{input: _, storage: _, function: _, output} => {
-                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Option<Evaluation>>>>>()
+                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Option<bool>>>>>()
             }
         }
     }
 
-    pub(crate) fn get_output_one(&self, o_ind: usize) -> Rc<Cell<Option<Evaluation>>> {
+    pub(crate) fn get_outputs_options(&self) -> Box<[Rc<Cell<Option<bool>>>]> {
+        match self {
+            NoStorage{input: _, function: _, output} => output.clone(),
+            Storage{input: _, storage: _, function: _, output} => output.clone()
+        }
+    }
+
+    pub(crate) fn get_output(&self, o_ind: usize) -> Rc<Cell<Option<bool>>> {
         match self {
             NoStorage{input: _, function: _, output} => output[o_ind].clone(),
             Storage{input: _, storage: _, function: _, output} => output[o_ind].clone()
         }
     }
 
-    pub(crate) fn set_ns_fn(&mut self, new_fn: fn(&[Option<Rc<Cell<Option<Evaluation>>>>],
-        &mut [Rc<Cell<Option<Evaluation>>>])) {
+    pub(crate) fn get_output_value(&self, o_ind: usize) -> Option<bool> {
+        match self {
+            NoStorage{output, ..} => output[o_ind].get(),
+            Storage{output, ..} => output[o_ind].get()
+        }
+    }
+
+    pub(crate) fn set_ns_fn(&mut self, new_fn: fn(&[Option<Rc<Cell<Option<bool>>>>],
+        &mut [Rc<Cell<Option<bool>>>])) {
         match self {
             NoStorage{input: _, function, output: _} => *function = new_fn,
             _ => {}
         }
     }
 
-    pub(crate) fn set_s_fn(&mut self, new_fn: fn(&[Option<Rc<Cell<Option<Evaluation>>>>], &mut [bool],
-            &mut [Rc<Cell<Option<Evaluation>>>])) {
+    pub(crate) fn set_s_fn(&mut self, new_fn: fn(&[Option<Rc<Cell<Option<bool>>>>],
+        &mut [bool], &mut [Rc<Cell<Option<bool>>>])) {
         match self {
             Storage{input: _, storage: _, function, output: _} => *function = new_fn,
             _ => {}
@@ -164,8 +148,7 @@ impl Gate {
     }
     
     pub(crate) fn update_inputs(&mut self,
-        update_function: fn(&Box<[Option<Rc<Cell<Option<Evaluation>>>>]>,
-        &mut Box<[Rc<Cell<Option<Evaluation>>>]>)) {
+        update_function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [Rc<Cell<Option<bool>>>])) {
         match self {
             NoStorage{input, function: _, output} => update_function(&*input, output),
             Storage{input, storage: _, function: _, output} => update_function(&*input, output)

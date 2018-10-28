@@ -1,8 +1,7 @@
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
-use std::cell::Cell;
 
-use board::{circuit::Circuit, gate::Gate};
+use board::{circuit::Circuit};
 
 enum Wire {
     Intracircuit{target_circuit: usize, target_gate: usize, tool_gate: usize},
@@ -67,8 +66,8 @@ impl Board {
     pub(crate) fn make_inter_circuit_i_connection(&mut self, target_circuit: usize,
         target_gate: usize, target_gate_input: usize, tool_circuit: usize, tool_gate: usize,
         tool_gate_output: usize) {
-        let output_rcc = self[tool_circuit][tool_gate].get_output_one(tool_gate_output);
-        self[target_circuit][target_gate].set_i_one(target_gate_input, Some(output_rcc));
+        let output_rcc = self[tool_circuit][tool_gate].get_output(tool_gate_output);
+        self[target_circuit][target_gate].set_i(target_gate_input, Some(output_rcc));
     }
 
     pub(crate) fn remove_gate(&mut self, target_circuit: usize, target_gate: usize) {
@@ -78,11 +77,11 @@ impl Board {
         }
         for c in &mut self.circuits {
             for g in &mut c.gates {
-                let inputs = g.get_inputs_all();
+                let inputs = g.get_inputs();
                 for i in 0..inputs.len() {
                     if let Some(ref input) = inputs[i] {
                         if outputs.iter().any(|output| Rc::ptr_eq(&input, output)) {
-                            g.set_i_one(i, None);
+                            g.set_i(i, None);
                         }
                     }
                 }
@@ -98,11 +97,11 @@ impl Board {
         self.circuits.remove(target_circuit);
         for c in &mut self.circuits {
             for g in &mut c.gates {
-                let inputs = g.get_inputs_all();
+                let inputs = g.get_inputs();
                 for i in 0..inputs.len() {
                     if let Some(ref input) = inputs[i] {
                         if outputs.iter().any(|output| Rc::ptr_eq(&input, output)) {
-                            g.set_i_one(i, None);
+                            g.set_i(i, None);
                         }
                     }
                 }
