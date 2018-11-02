@@ -26,7 +26,7 @@ pub(crate) enum Gate {
     }
 }
 
-use Gate::*;
+use self::Gate::*;
 
 impl Debug for Gate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -48,7 +48,13 @@ impl Gate {
         NoStorage {
             input: vec![None; num_i].into_boxed_slice(),
             function,
-            output: vec![Rc::new(Cell::new(None)); num_o].into_boxed_slice()
+            output: {
+                let mut output = Vec::new();
+                for _ in 0..num_o {
+                    output.push(Rc::new(Cell::new(None)));
+                }
+                output.into_boxed_slice()
+            }
         }
     }
 
@@ -59,7 +65,13 @@ impl Gate {
             input: vec![None; num_i].into_boxed_slice(),
             storage: vec![false; amt_storage].into_boxed_slice(),
             function,
-            output: vec![Rc::new(Cell::new(None)); num_o].into_boxed_slice()
+            output: {
+                let mut output = Vec::new();
+                for _ in 0..num_o {
+                    output.push(Rc::new(Cell::new(None)));
+                }
+                output.into_boxed_slice()
+            }
         }
     }
 
@@ -146,7 +158,7 @@ impl Gate {
             _ => {}
         }
     }
-    
+
     pub(crate) fn update_inputs(&mut self,
         update_function: fn(&[Option<Rc<Cell<Option<bool>>>>], &mut [Rc<Cell<Option<bool>>>])) {
         match self {
