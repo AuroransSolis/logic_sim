@@ -1,4 +1,4 @@
-use board::gate::Gate;
+use board::{gate::Gate, line::Line};
 
 impl Gate {
     // Spec:
@@ -7,14 +7,12 @@ impl Gate {
     // 16: write
     // 17: read
     // 18: clock
-    pub(crate) fn ram_8() -> Self {
+    pub fn ram_8() -> Self {
         Gate::new_s(19, 256 * 8, 8, |inputs, storage, outputs| {
             if None == inputs[18] {
                 return;
             } else if let Some(opt_clk) = &inputs[18] {
-                if opt_clk.get().is_none() {
-                    return;
-                } else if let Some(false) = opt_clk.get() {
+                if opt_clk.get().is_disconnected() {
                     return;
                 }
             }
@@ -22,27 +20,27 @@ impl Gate {
                 return;
             }
             for i in 0..18 {
-                if inputs[i].as_ref().unwrap().get().is_none() {
+                if inputs[i].as_ref().unwrap().get().is_disconnected() {
                     return;
                 }
             }
             let mut addr_inputs = [false; 8];
             let mut write_val = [false; 8];
             for i in 0..8 {
-                addr_inputs[i] = inputs[i].as_ref().unwrap().get().unwrap();
-                write_val[i] = inputs[8 + i].as_ref().unwrap().get().unwrap();
+                addr_inputs[i] = inputs[i].as_ref().unwrap().get().into();
+                write_val[i] = inputs[8 + i].as_ref().unwrap().get().into();
             }
-            let write = inputs[16].as_ref().unwrap().get().unwrap();
-            let read = inputs[17].as_ref().unwrap().get().unwrap();
+            let write = inputs[16].as_ref().unwrap().get().into();
+            let read = inputs[17].as_ref().unwrap().get().into();
             let addr = from_bool_8(&addr_inputs);
             if write {
                 for i in 0..8 {
-                    storage[8 * addr + i] = write_val[i];
+                    storage[8 * addr + i] = write_val[i].into();
                 }
             }
             if read {
                 for i in 0..8 {
-                    outputs[i].set(Some(storage[8 * addr + i]));
+                    outputs[i].set(storage[8 * addr + i].into());
                 }
             }
         })
@@ -54,14 +52,12 @@ impl Gate {
     // 32: write
     // 33: read
     // 34: clock
-    pub(crate) fn ram_16() -> Self {
-        Gate::new_s(35, 256 * 8, 16, |inputs, storage, outputs| {
+    pub fn ram_16() -> Self {
+        Gate::new_s(35, 65536 * 16, 16, |inputs, storage, outputs| {
             if None == inputs[34] {
                 return;
             } else if let Some(opt_clk) = &inputs[18] {
-                if opt_clk.get().is_none() {
-                    return;
-                } else if let Some(false) = opt_clk.get() {
+                if opt_clk.get().is_disconnected() {
                     return;
                 }
             }
@@ -69,27 +65,27 @@ impl Gate {
                 return;
             }
             for i in 0..35 {
-                if inputs[i].as_ref().unwrap().get().is_none() {
+                if inputs[i].as_ref().unwrap().get().is_disconnected() {
                     return;
                 }
             }
             let mut addr_inputs = [false; 16];
             let mut write_val = [false; 16];
             for i in 0..16 {
-                addr_inputs[i] = inputs[i].as_ref().unwrap().get().unwrap();
-                write_val[i] = inputs[16 + i].as_ref().unwrap().get().unwrap();
+                addr_inputs[i] = inputs[i].as_ref().unwrap().get().into();
+                write_val[i] = inputs[16 + i].as_ref().unwrap().get().into();
             }
-            let write = inputs[32].as_ref().unwrap().get().unwrap();
-            let read = inputs[33].as_ref().unwrap().get().unwrap();
+            let write = inputs[32].as_ref().unwrap().get().into();
+            let read = inputs[33].as_ref().unwrap().get().into();
             let addr = from_bool_16(&addr_inputs);
             if write {
                 for i in 0..16 {
-                    storage[16 * addr + i] = write_val[i];
+                    storage[16 * addr + i] = write_val[i].into();
                 }
             }
             if read {
                 for i in 0..16 {
-                    outputs[i].set(Some(storage[16 * addr + i]));
+                    outputs[i].set(storage[16 * addr + i].into());
                 }
             }
         })
