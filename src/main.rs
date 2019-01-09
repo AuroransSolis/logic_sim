@@ -6,6 +6,7 @@ use std::cell::Cell;
 
 pub mod board;
 
+pub(crate) use board::line::Line;
 pub(crate) use board::gate::Gate;
 pub(crate) use board::circuit::Circuit;
 pub(crate) use board::board::Board;
@@ -49,10 +50,10 @@ mod tests {
             inputs.push(Rc::new(Cell::new(Some(false))));
         }
         for i in 0..3 {
-            mux.set_i(i, Some(controls[i].clone()));
+            mux.set_input(i, Some(controls[i].clone()));
         }
         for i in 0..128 {
-            mux.set_i(3 + i, Some(inputs[i].clone()));
+            mux.set_input(3 + i, Some(inputs[i].clone()));
         }
         mux.update_inputs(|inputs, outputs| {
             if !inputs.contains(&None) {
@@ -106,11 +107,11 @@ mod tests {
             Rc::new(Cell::new(Some(false))), Rc::new(Cell::new(Some(false))),
             Rc::new(Cell::new(Some(false))), Rc::new(Cell::new(Some(false)))];
         for i in 0..8 {
-            ram_8.set_i(i, Some(addr[i].clone()));
-            ram_8.set_i(10 + i, Some(write_val[i].clone()));
+            ram_8.set_input(i, Some(addr[i].clone()));
+            ram_8.set_input(10 + i, Some(write_val[i].clone()));
         }
-        ram_8.set_i(8, Some(write.clone()));
-        ram_8.set_i(9, Some(read.clone()));
+        ram_8.set_input(8, Some(write.clone()));
+        ram_8.set_input(9, Some(read.clone()));
         ram_8.update_inputs(|inputs, outputs| {
             if !inputs.contains(&None) {
                 for i in 0..outputs.len() {

@@ -11,20 +11,19 @@ pub enum Gate {
     // The number of inputs and outputs should be a fixed amount determined at runtime, hence the
     // use of 'Box<[T]>'.
     NoStorage {
-        input: Box<[Option<Rc<Cell<Line>>>]>,
-        function: fn(&[Option<Rc<Cell<Line>>>], &mut [Rc<Cell<Line>>]),
-        output: Box<[Rc<Cell<Line>>]>
+        input: Vec<Rc<Cell<Line>>>,
+        function: fn(&[Rc<Cell<Line>>], &mut [Rc<Cell<Line>>]),
+        output: Vec<Rc<Cell<Line>>>
     },
     // This covers more complicated gates. What this can do is basically up to your imagination. RAM
     // modules of arbitrary size are possible, limited only by the amount of memory you're willing
     // to dedicate to the `Gate`. As for the use of 'Box<[T]>', see the end of the comment for the
     // 'NoStorage' variant.
     Storage {
-        input: Box<[Option<Rc<Cell<Line>>>]>,
-        storage: Box<[bool]>,
-        function: fn(&[Option<Rc<Cell<Line>>>], &mut [bool],
-            &mut [Rc<Cell<Line>>]),
-        output: Box<[Rc<Cell<Line>>]>
+        input: Vec<Rc<Cell<Line>>>,
+        storage: Vec<Line>,
+        function: fn(&[Rc<Cell<Line>>], &mut [Line], &mut [Rc<Cell<Line>>]),
+        output: Vec<Rc<Cell<Line>>>
     }
 }
 
@@ -45,131 +44,161 @@ impl Debug for Gate {
 
 impl Gate {
     pub fn new_ns(num_i: usize, num_o: usize,
-        function: fn(&[Option<Rc<Cell<Line>>>], &mut [Rc<Cell<Line>>])) -> Self {
+        function: fn(&[Rc<Cell<Line>>], &mut [Rc<Cell<Line>>])) -> Self {
         NoStorage {
-            input: vec![None; num_i].into_boxed_slice(),
+            input: (0..num_i).map(|| Rc::new(Cell::new(Line::Disconnected))).collect::<Vec<_>>(),
             function,
-            output: {
-                let mut output = Vec::new();
-                for _ in 0..num_o {
-                    output.push(Rc::new(Cell::new(None)));
-                }
-                output.into_boxed_slice()
-            }
+            output: (0..num_o).map(|| Rc::new(Cell::new(Line::Low))).collect::<Vec<_>>()
         }
     }
 
     pub fn new_s(num_i: usize, amt_storage: usize, num_o: usize,
-        function: fn(&[Option<Rc<Cell<Line>>>], &mut [bool], &mut [Rc<Cell<Line>>])) -> Self {
+        function: fn(&[Rc<Cell<Line>>], &mut [Line], &mut [Rc<Cell<Line>>])) -> Self {
         Storage {
-            input: vec![None; num_i].into_boxed_slice(),
+            input: (0..num_i).map(|| Rc::new(Cell::new(Line::Disconnected))).collect::<Vec<_>>(),
             storage: vec![false; amt_storage].into_boxed_slice(),
             function,
-            output: {
-                let mut output = Vec::new();
-                for _ in 0..num_o {
-                    output.push(Rc::new(Cell::new(None)));
-                }
-                output.into_boxed_slice()
-            }
+            output: (0..num_o).map(|| Rc::new(Cell::new(Line::Low))).collect::<Vec<_>>()
         }
     }
 
-    pub fn set_i(&mut self, i_ind: usize, new_i: Option<Rc<Cell<Line>>>) {
+    pub fn set_input(&mut self, i_ind: usize, new_i: Rc<Cell<Line>>) {
         match self {
             NoStorage{input, function: _, output: _} => input[i_ind] = new_i,
             Storage{input, storage: _, function: _, output: _} => input[i_ind] = new_i
         }
     }
 
-    pub fn get_input(&self, i_ind: usize) -> Option<Rc<Cell<Line>>> {
+    pub fn get_input(&self, i_ind: usize) -> Rc<Cell<Line>> {
         match self {
-            NoStorage{input, function: _, output: _} => input[i_ind].clone(),
-            Storage{input, storage: _, function: _, output: _} => input[i_ind].clone()
+            NoStorage{input, ..} | Storage{input, ..} => input[i_ind].clone()
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<Option<Rc<Cell<Line>>>> {
+    pub fn get_mut_input(&mut self, i_ind: usize) -> &mut Rc<Cell<Line>> {
         match self {
-            NoStorage{input, function: _, output: _} => {
-                input.iter().map(|e| e.clone())
-                    .collect::<Vec<Option<Rc<Cell<Line>>>>>()
-            },
-            Storage{input, storage: _, function: _, output: _} => {
-                input.iter().map(|e| e.clone())
-                    .collect::<Vec<Option<Rc<Cell<Line>>>>>()
-            }
+            NoStorage{mut input, ..} | Storage{mut input, ..} => &mut input[i_ind]
         }
     }
 
-    pub fn get_outputs(&self) -> Vec<Rc<Cell<Line>>> {
+    pub fn get_input_slice(&self) -> &[Rc<Cell<Line>>] {
         match self {
-            NoStorage{input: _, function: _, output} => {
-                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Line>>>>()
-            },
-            Storage{input: _, storage: _, function: _, output} => {
-                output.iter().map(|e| e.clone()).collect::<Vec<Rc<Cell<Line>>>>()
-            }
+            NoStorage{input, ..} | Storage{input, ..} => &input
         }
     }
 
-    pub fn get_outputs_options(&self) -> Box<[Rc<Cell<Line>>]> {
+    pub fn get_mut_input_slice(&mut self) -> &mut [Rc<Cell<Line>>] {
         match self {
-            NoStorage{input: _, function: _, output} => output.clone(),
-            Storage{input: _, storage: _, function: _, output} => output.clone()
+            NoStorage{mut input, ..} | Storage{mut input, ..} => &mut input
+        }
+    }
+
+    pub fn get_input_vec(&self) -> Vec<Rc<Cell<Line>>> {
+        match self {
+            NoStorage{input, ..} | Storage{input, ..} => input.clone()
         }
     }
 
     pub fn get_output(&self, o_ind: usize) -> Rc<Cell<Line>> {
         match self {
-            NoStorage{input: _, function: _, output} => output[o_ind].clone(),
-            Storage{input: _, storage: _, function: _, output} => output[o_ind].clone()
+            NoStorage{output, ..} | Storage{output, ..} => output[o_ind].clone(),
         }
     }
 
-    pub fn get_output_value(&self, o_ind: usize) -> Line {
+    pub fn get_mut_output(&mut self, o_ind: usize) -> &mut Rc<Cell<Line>> {
         match self {
-            NoStorage{output, ..} => output[o_ind].get(),
-            Storage{output, ..} => output[o_ind].get()
+            NoStorage{mut output, ..} | Storage{mut output, ..} => &mut output[o_ind]
         }
     }
 
-    pub fn set_ns_fn(&mut self, new_fn: fn(&[Option<Rc<Cell<Line>>>], &mut [Rc<Cell<Line>>])) {
+    pub fn get_output_slice(&self) -> &[Rc<Cell<Line>>] {
         match self {
-            NoStorage{input: _, function, output: _} => *function = new_fn,
-            _ => {}
+            NoStorage{output, ..} | Storage{output, ..} => &output
         }
     }
 
-    pub fn set_s_fn(&mut self,
-        new_fn: fn(&[Option<Rc<Cell<Line>>>], &mut [bool], &mut [Rc<Cell<Line>>])) {
+    pub fn get_mut_output_slice(&mut self) -> &mut [Rc<Cell<Line>>] {
         match self {
-            Storage{input: _, storage: _, function, output: _} => *function = new_fn,
-            _ => {}
+            NoStorage{mut output, ..} | Storage{mut output, ..} => &mut output
         }
     }
 
-    pub fn set_storage(&mut self, new_storage: Vec<bool>) {
+    pub unsafe fn set_ns_fn(&mut self, new_fn: fn(&[Rc<Cell<Line>>], &mut [Rc<Cell<Line>>])) {
         match self {
-            Storage{input: _, storage, function: _, output: _} => {
-                *storage = new_storage.into_boxed_slice();
+            NoStorage{function, ..} => *function = new_fn,
+            _ => panic!("Attempted to set a `NoStorage` instance's function to `Storage`'s type.")
+        }
+    }
+
+    pub unsafe fn set_s_fn(&mut self,
+        new_fn: fn(&[Rc<Cell<Line>>], &mut [Line], &mut [Rc<Cell<Line>>])) {
+        match self {
+            Storage{function, ..} => *function = new_fn,
+            _ => panic!("Attempted to set a `Storage` instance's function to `NoStorage`'s type.")
+        }
+    }
+
+    pub fn set_storage(&mut self, new_storage: Vec<Line>) {
+        match self {
+            Storage{mut storage, ..} => *storage = new_storage,
+            _ => panic!("Tried to set the storage of a `Gate::NoStorage`.")
+        }
+    }
+
+    pub fn reset_storage(&mut self) {
+        match self {
+            Storage{mut storage, ..} => {
+                for line in storage {
+                    *line = Line::Low;
+                }
             },
-            _ => {}
+            _ => panic!("Tried to reset the storage of a `Gate::NoStorage`.")
         }
     }
 
-    pub fn update_inputs(&mut self,
-        update_function: fn(&[Option<Rc<Cell<Line>>>], &mut [Rc<Cell<Line>>])) {
+    pub fn splat_storage(&mut self, state: Line) {
         match self {
-            NoStorage{input, function: _, output} => update_function(&*input, output),
-            Storage{input, storage: _, function: _, output} => update_function(&*input, output)
+            Storage{mut storage, ..} => {
+                for line in storage {
+                    *line = state;
+                }
+            },
+            _ => panic!("Tried to splat the storage of a `Gate::NoStorage`.")
         }
     }
 
     pub fn eval(&mut self) {
         match self {
-            NoStorage{input, function, output} => function(&*input, output),
-            Storage{input, storage, function, output} => function(&*input, storage, output),
+            NoStorage{input, function, mut output} => function(&input, &mut output),
+            Storage{input, mut storage, function, mut output} => {
+                function(&input, &mut storage, &mut output)
+            },
+        }
+    }
+}
+
+impl Gate {
+    pub fn high_source() -> Self {
+        Gate::NoStorage {
+            input: Vec::new(),
+            function: |_, _| {},
+            output: vec![Rc::new(Cell::new(Line::High)); 1]
+        }
+    }
+
+    pub fn low_source() -> Self {
+        Gate::NoStorage {
+            input: Vec::new(),
+            function: |_, _| {},
+            output: vec![Rc::new(Cell::new(Line::Low)); 1]
+        }
+    }
+
+    pub fn sink() -> Self {
+        Gate::NoStorage {
+            input: vec![Rc::new(Cell::new(Line::Disconnected))],
+            function: |_, _| {},
+            output: Vec::new()
         }
     }
 }
