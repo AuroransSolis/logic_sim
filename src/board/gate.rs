@@ -69,6 +69,14 @@ impl Gate {
         }
     }
 
+    pub unsafe fn set_inputs<T: AsRef<[Rc<Cell<Line>>]>>(&mut self, new_is: T) {
+        let inputs_ref = match self {
+            Gate::NoStorage{input, ..} | Gate::Storage{input, ..} => input
+        };
+        inputs_ref.clear();
+        inputs_ref.extend(new_is.as_ref().iter().cloned());
+    }
+
     pub fn get_input(&self, i_ind: usize) -> Rc<Cell<Line>> {
         match self {
             NoStorage{input, ..} | Storage{input, ..} => input[i_ind].clone()
