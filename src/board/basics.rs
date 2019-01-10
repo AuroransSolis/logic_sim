@@ -1,11 +1,11 @@
-use board::{gate::Gate, line::Line};
+use board::{gate::Gate, line::LineState};
 
 impl Gate {
     pub fn and() -> Self {
         Gate::new_ns(2, 1, |inputs, output| {
             if let (Some(rcc_l1), Some(rcc_l2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
                 if rcc_l1.get().is_disconnected() || rcc_l2.get().is_disconnected() {
-                    output[0].set(Line::disconnected());
+                    output[0].set(LineState::disconnected());
                 } else {
                     output[0].set(rcc_l1.get() && rcc_l2.get());
                 }
@@ -20,7 +20,7 @@ impl Gate {
         Gate::new_ns(2, 1, |inputs, output| {
             if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
                 if rcc_opt_b1.get().is_disconnected() || rcc_opt_b2.get().is_disconnected() {
-                    output[0].set(Line::disconnected());
+                    output[0].set(LineState::disconnected());
                 } else {
                     output[0].set(rcc_opt_b1.get() && rcc_opt_b2.get());
                 }
