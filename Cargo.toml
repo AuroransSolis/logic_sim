@@ -4,3 +4,11 @@ version = "0.1.0"
 authors = ["AuroransSolis <primalucegd@gmail.com>"]
 
 [dependencies]
+
+[dev-dependencies]
+criterion = "0.2.7"
+
+[[bench]]
+name = "logic_bench"
+harness = false
+path = "src/logic_bench.rs"

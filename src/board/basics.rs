@@ -1,6 +1,10 @@
 use board::{gate::Gate, line::Line};
 
 impl Gate {
+    pub fn buffer() -> Self {
+        Gate::new_ns(1, 1, |input, output| output[0].set(input[0].get()))
+    }
+
     pub fn and() -> Self {
         Gate::new_ns(2, 1, |inputs, output| output[0].set(inputs[0].get() & inputs[1].get()))
     }
