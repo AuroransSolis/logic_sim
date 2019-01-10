@@ -41,10 +41,10 @@ impl Gate {
     /// Control line DISCONNECTED => output LOW
     pub fn mux_1b_2i1c() -> Self {
         Gate::new_ns(3, 1, |inputs, output| {
-            if inputs[2].is_disconnected() {
+            if inputs[2].get().is_disconnected() {
                 output[0].set(Line::Low);
             } else {
-                if inputs[2].is_low() {
+                if inputs[2].get().is_low() {
                     output[0].set(inputs[0].get());
                 } else {
                     output[1].set(inputs[1].get());
@@ -61,11 +61,11 @@ impl Gate {
     /// Control line DISCONNECTED => output DISCONNECTED on both output lines
     pub fn dmux_1b_2o1c() -> Self {
         Gate::new_ns(2, 2, |inputs, outputs| {
-            if inputs[1].is_disconnected() {
+            if inputs[1].get().is_disconnected() {
                 outputs[0].set(Line::Disconnected);
                 outputs[1].set(Line::Disconnected);
             } else {
-                if inputs[1].is_low() {
+                if inputs[1].get().is_low() {
                     outputs[0].set(inputs[0].get());
                     outputs[1].set(Line::Low);
                 } else {

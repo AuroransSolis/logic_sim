@@ -2,6 +2,45 @@ use board::{gate::Gate, line::Line};
 
 impl Gate {
     /// Spec:
+    /// 0: write 0 to master
+    /// 1: write 1 to master
+    /// 2: clock
+    pub fn master_slave_flip_flop() -> Self {
+        // Third `Line` is used as a flag to signify whether the write has been done on the trailing
+        // edge of the clock signal.
+        Gate::new_s(3, 2, 1, |inputs, storage, output| {
+            if inputs[2].get().is_high() {
+                storage[1] = Line::Low;
+                if !(inputs[0].get().is_high() && inputs[1].get().is_high()) {
+                    if inputs[0].get().is_high() {
+                        storage[0] = Line::Low;
+                    } else if inputs[1].get().is_high() {
+                        storage[0] = Line::High;
+                    }
+                }
+            } else if inputs[2].get().is_low() && storage[1].is_low() {
+                output[0].set(storage[0]);
+                storage[1] = Line::High;
+            }
+        })
+    }
+
+    /// Spec:
+    /// 0: set latch low
+    /// 1: set latch high
+    pub fn nor_latch() -> Self {
+        Gate::new_ns(2, 1, |inputs, output| {
+            if !(inputs[0].get().is_high() && inputs[1].get().is_high()) {
+                if inputs[0].get().is_high() {
+                    output[0].set(Line::Low);
+                } else if inputs[1].get().is_high() {
+                    output[0].set(Line::High);
+                }
+            }
+        })
+    }
+
+    /// Spec:
     /// 0..8: address
     /// 8..16: write value
     /// 16: write
@@ -37,7 +76,7 @@ impl Gate {
                         storage[8 * addr + i] = inputs[8 + i].get() | Line::Low;
                     }
                 }
-            } else if inputs[18].is_low() && storage[storage.len() - 1].is_low() {
+            } else if inputs[18].get().is_low() && storage[storage.len() - 1].is_low() {
                 let (masters, slaves) = storage.split_at_mut(256 * 8);
                 slaves.copy_from_slice(&*masters);
                 let last = slaves.len() - 1;
