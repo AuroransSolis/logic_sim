@@ -1,4 +1,3 @@
-use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 use std::cell::Cell;
 
@@ -6,21 +5,9 @@ use board::gate::Gate;
 
 #[derive(Debug)]
 pub(crate) struct Circuit {
-    pub(crate) gates: Vec<Gate>
-}
-
-impl Index<usize> for Circuit {
-    type Output = Gate;
-
-    fn index(&self, idx: usize) -> &Gate {
-        &self.gates[idx]
-    }
-}
-
-impl IndexMut<usize> for Circuit {
-    fn index_mut(&mut self, idx: usize) -> &mut Gate {
-        &mut self.gates[idx]
-    }
+    pub(crate) start_input: usize,
+    pub(crate) start_output: usize,
+    pub(crate) gates: Vec<Gate>,
 }
 
 impl Circuit {
