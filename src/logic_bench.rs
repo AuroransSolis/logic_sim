@@ -1,6 +1,6 @@
 #[macro_use] extern crate criterion;
 
-use criterion::Criterion;
+use criterion::{Criterion, black_box};
 
 pub mod board;
 
@@ -9,7 +9,6 @@ use board::gate::Gate;
 
 use std::cell::Cell;
 use std::rc::Rc;
-
 fn bench_128i_3c_mux(c: &mut Criterion) {
     let mut mux = Gate::new_ns(128 + 3, 16, |inputs, outputs| {
         if !inputs[128].get().is_disconnected() && !inputs[129].get().is_disconnected()
@@ -516,6 +515,11 @@ fn bench_128i_3c_mux_conditionless_const(c: &mut Criterion) {
     c.bench_function("MUX gate without conditionals (const)", move |b| b.iter(|| {
         black_box(mux.eval());
     }));
+}
+
+fn bench_get_input(c: &mut Criterion) {
+    let gate = Gate::master_slave_flip_flop_ram_16();
+    c.bench_function("Get input (as_ptr())", move |b| b.iter(|| black_box(gate.get_input(17))));
 }
 
 use std::time::Duration;
