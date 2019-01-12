@@ -64,8 +64,7 @@ impl Gate {
 
     pub fn set_input(&mut self, i_ind: usize, new_i: Rc<Cell<Line>>) {
         match self {
-            NoStorage{input, function: _, output: _} => input[i_ind] = new_i,
-            Storage{input, storage: _, function: _, output: _} => input[i_ind] = new_i
+            NoStorage{input, ..} | Storage{input, ..} => input[i_ind] = new_i
         }
     }
 

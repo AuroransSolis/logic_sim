@@ -9,6 +9,7 @@ use board::gate::Gate;
 
 use std::cell::Cell;
 use std::rc::Rc;
+
 fn bench_128i_3c_mux(c: &mut Criterion) {
     let mut mux = Gate::new_ns(128 + 3, 16, |inputs, outputs| {
         if !inputs[128].get().is_disconnected() && !inputs[129].get().is_disconnected()
