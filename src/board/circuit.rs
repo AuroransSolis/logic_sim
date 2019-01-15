@@ -1,26 +1,15 @@
-use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 use std::cell::Cell;
 
 use board::gate::Gate;
+use board::line::Line;
 
 #[derive(Debug)]
-pub(crate) struct Circuit {
-    pub(crate) gates: Vec<Gate>
-}
-
-impl Index<usize> for Circuit {
-    type Output = Gate;
-
-    fn index(&self, idx: usize) -> &Gate {
-        &self.gates[idx]
-    }
-}
-
-impl IndexMut<usize> for Circuit {
-    fn index_mut(&mut self, idx: usize) -> &mut Gate {
-        &mut self.gates[idx]
-    }
+pub(crate) struct Circuit<T: Gate> {
+    pub(crate) gates: Vec<T>,
+    pub(crate) lines: Vec<Line>,
+    pub(crate) inputs: Vec<usize>,
+    pub(crate) outputs: Vec<usize>
 }
 
 impl Circuit {
@@ -52,7 +41,7 @@ impl Circuit {
             self[g].update_inputs(update_function);
         }
     }
-    
+
     pub(crate) fn eval(&mut self, g: usize) {
         self[g].eval();
     }
@@ -68,7 +57,7 @@ impl Circuit {
             self.eval_all();
         }
     }
-    
+
     // Marked as unsafe because the user has to guarantee that the 'Circuit' is NOT in a board.
     // Otherwise, this function can easily cause memory leaks. The only time that this is safe
     // is if the 'Circuit' has NO connections to other 'Circuit's.

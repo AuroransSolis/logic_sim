@@ -1,158 +1,67 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not};
+use std::ops::{BitAnd, BitOr, BitXor, Not, BitAndAssign, BitOrAssign, BitXorAssign};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, Debug)]
 pub enum Line {
     High,
     Low,
     Disconnected
 }
 
-macro_rules! impl_is_variant {
-    ($enm:ty {
-        $($variant:pat => $method_name:ident),*
-    }) => {
-        impl $enm {
-            $(
-            pub fn $method_name(&self) -> bool {
-                match self {
-                    $variant => true,
-                    _ => false
-                }
-            }
-            )*
-        }
-    }
-}
+pub(crate) const HIGH: Line = Line::High;
+pub(crate) const LOW: Line = Line::Low;
+pub(crate) const DISCONNECTED: Line = Line::Disconnected;
 
-impl_is_variant!{Line {
-    Line::High => is_high,
-    Line::Low => is_low,
-    Line::Disconnected => is_disconnected
-}}
-
-impl Line {
-    pub fn try_into_bool(self) -> Option<bool> {
-        if self.is_high() {
-            Some(true)
-        } else if self.is_low() {
-            Some(false)
-        } else {
-            None
-        }
-    }
-
-    pub fn into_bool(self) -> bool {
-        debug_assert!(!self.is_disconnected());
-        if self.is_high() {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn high() -> Self {
-        Line::High
-    }
-
-    pub fn low() -> Self {
-        Line::Low
-    }
-
-    pub fn disconnected() -> Self {
-        Line::Disconnected
-    }
-}
-
-impl From<bool> for Line {
-    fn from(other: bool) -> Self {
-        if other {
-            Line::High
-        } else {
-            Line::Low
-        }
-    }
-}
-
-impl Into<bool> for Line {
-    fn into(self) -> bool {
-        match self {
-            Line::High => true,
-            Line::Low => false,
-            Line::Disconnected => unimplemented!()
-        }
+pub(crate) fn not(l0: Line) -> Line {
+    match l0 {
+        HIGH => LOW,
+        _ => HIGH
     }
 }
 
 #[inline]
-impl BitAnd for Line {
-    fn bitand(self, other: Line) -> Line {
-        (bool::from(self) && bool::from(other)).into()
+pub(crate) fn and(l0: Line, l1: Line) -> Line {
+    match (l0, l1) {
+        (HIGH, HIGH) => HIGH,
+        _ => LOW
     }
 }
 
 #[inline]
-impl BitOr for Line {
-    fn bitor(self, other: Line) -> Line {
-        (bool::from(self) || bool::from(other)).into()
+pub(crate) fn or(l0: Line, l1: Line) -> Line {
+    match (l0, l1) {
+        (HIGH, _) | (_, HIGH) => HIGH,
+        _ => LOW
     }
 }
 
 #[inline]
-impl BitXor for Line {
-    fn bitxor(self, other: Line) -> Line {
-        (self != other).into()
-    }
-}
-
-macro_rules! forward_line_impl {
-    (impl $imp:ident, $method:ident for $t:ty) => {
-        #[inline]
-        impl<'a> $imp<$t> for &'a $t {
-            type Output = <$t as $imp>::Output;
-
-            fn $method(self, other: $t) -> <$t as $imp>::Output {
-                $imp::$method(*self, other)
-            }
-        }
-
-        #[inline]
-        impl<'a> $imp<&'a $t> for $t {
-            type Output = <$t as $imp>::Output;
-
-            fn $method(self, other &'a $t) -> <$t as $imp>::Output {
-                $imp::$method(self, *other)
-            }
-        }
-
-        #[inline]
-        impl<'a, 'b> $imp<&'b $t> for &'a $t {
-            type output = <$t as $imp>::Output;
-
-            fn $method(self, other: &'b $t) -> <$t as $imp>::Output {
-                $imp::$method(*self, *other)
-            }
-        }
-    }
-}
-
-forward_line_impl!{impl BitAnd, bitand for Line}
-forward_line_impl!{impl BitOr, bitor for Line}
-forward_line_impl!{impl Bitxor, bitxor for Line}
-
-#[inline]
-impl Not for Line {
-    type Output = Self;
-
-    fn not(self) -> Self {
-        (!bool::from(self)).into()
+pub(crate) fn xor(l0: Line, l1: Line) -> Line {
+    match l0 {
+        HIGH => !l1,
+        LOW | DISCONNECTED => l1
     }
 }
 
 #[inline]
-impl<'a> Not for &'a Line {
-    type Output = Line;
+pub(crate) fn nand(l0: Line, l1: Line) -> Line {
+    match (l0, l1) {
+        (HIGH, HIGH) => LOW,
+        _ => HIGH
+    }
+}
 
-    fn not(self) -> Line {
-        (!bool::from(*self)).into()
+#[inline]
+pub(crate) fn nor(l0: Line, l1: Line) -> Line {
+    match (l0, l1) {
+        (HIGH, _) | (_, HIGH) => LOW,
+        _ => HIGH
+    }
+}
+
+#[inline]
+pub(crate) fn xnor(l0: Line, l1: Line) -> Line {
+    match l0 {
+        HIGH => l1,
+        LOW | DISCONNECTED => !l1
     }
 }

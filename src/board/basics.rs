@@ -1,151 +1,221 @@
-use board::{gate::Gate, line::LineState};
+use board::{gate::Gate, line::Line, circuit::Circuit};
 
-impl Gate {
-    pub fn and() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_l1), Some(rcc_l2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if rcc_l1.get().is_disconnected() || rcc_l2.get().is_disconnected() {
-                    output[0].set(LineState::disconnected());
-                } else {
-                    output[0].set(rcc_l1.get() && rcc_l2.get());
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+pub(crate) struct MUX_1_2 {
+    i0: usize,
+    i1: usize,
+    sel: usize,
+    output: usize
+}
+
+impl MUX_1_2 {
+    pub(crate) fn new(i0: usize, i1: usize, sel: usize, output: usize) -> Self {
+        MUX_1_2 {
+            i0,
+            i1,
+            sel,
+            output
+        }
+    }
+}
+
+impl Gate for MUX_1_2 {
+    fn get_input(&self, i: usize) -> usize {
+        match i {
+            0 => i0,
+            1 => i1,
+            2 => sel,
+            _ => panic!("Invalid input.")
+        }
     }
 
-
-    pub fn or() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if rcc_opt_b1.get().is_disconnected() || rcc_opt_b2.get().is_disconnected() {
-                    output[0].set(LineState::disconnected());
-                } else {
-                    output[0].set(rcc_opt_b1.get() && rcc_opt_b2.get());
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn set_input(&mut self, i: usize, new_i: usize) {
+        match i {
+            0 => i0 = new_i,
+            1 => i1 = new_i,
+            2 => sel = new_i,
+            _ => panic!("Attempted to set invalid input.")
+        }
     }
 
-
-    pub fn xor() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if let (Some(b1), Some(b2)) = (rcc_opt_b1.get(), rcc_opt_b2.get()) {
-                    output[0].set(Some(b1 != b2));
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn num_inputs(&self) -> usize {
+        3
     }
 
-
-    pub fn nand() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if let (Some(b1), Some(b2)) = (rcc_opt_b1.get(), rcc_opt_b2.get()) {
-                    output[0].set(Some(!(b1 && b2)));
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn get_output(&self, o: usize) -> usize {
+        match o {
+            0 => self.output,
+            _ => panic!("Invalid output.")
+        }
     }
 
-
-    pub fn nor() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if let (Some(b1), Some(b2)) = (rcc_opt_b1.get(), rcc_opt_b2.get()) {
-                    output[0].set(Some(!(b1 || b2)));
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        match o {
+            0 => self.output = new_o,
+            _ => panic!("Attempting to set invalid output.")
+        }
     }
 
-
-    pub fn xnor() -> Self {
-        Gate::new_ns(2, 1, |inputs, output| {
-            if let (Some(rcc_opt_b1), Some(rcc_opt_b2)) = (inputs[0].as_ref(), inputs[1].as_ref()) {
-                if let (Some(b1), Some(b2)) = (rcc_opt_b1.get(), rcc_opt_b2.get()) {
-                    output[0].set(Some(b1 == b2));
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn num_ouputs(&self) -> usize {
+        1
     }
 
-    pub fn not() -> Self {
-        Gate::new_ns(1, 1, |input, output| {
-            if let Some(rcc_opt_b) = input[0].as_ref() {
-                if let Some(b) = rcc_opt_b.get() {
-                    output[0].set(Some(!b));
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn eval(&self, circuit: &mut Circuit<Gate>) {
+        let tmp = match circuit.lines[self.sel] {
+            HIGH => circuit.lines[self.i1],
+            LOW => circuit.lines[self.i0],
+            DISCONNECTED => DISCONNECTED
+        };
+        circuit.lines[self.output] = tmp;
+    }
+}
+
+pub(crate) struct DMUX_2_2 {
+    i0: usize,
+    sel: usize,
+    o0: usize,
+    o1: usize
+}
+
+impl DMUX_2_2 {
+    pub(crate) fn new(i0: usize, sel: usize, o0: usize, o1: usize) -> Self {
+        DMUX_2_2 {
+            i0,
+            sel,
+            o0,
+            o1
+        }
+    }
+}
+
+impl Gate for DMUX_2_2 {
+    fn get_input(&self, i: usize) -> usize {
+        match i {
+            0 => i0,
+            1 => sel,
+            _ => panic!("Invalid input.")
+        }
     }
 
-    // Inputs:
-    // 0 - input line 1
-    // 1 - input line 2
-    // 2 - control line
-    pub fn mux_1b_2i1c() -> Self {
-        Gate::new_ns(3, 1, |inputs, output| {
-            if let (Some(opt_ctrl_line), Some(opt_line_1), Some(opt_line_2))
-                = (&inputs[0], &inputs[1], &inputs[2]) {
-                if let Some(true) = opt_ctrl_line.get() {
-                    output[0].set(opt_line_1.get());
-                } else if let Some(false) = opt_ctrl_line.get() {
-                    output[0].set(opt_line_2.get());
-                } else {
-                    output[0].set(None);
-                }
-            } else {
-                output[0].set(None);
-            }
-        })
+    fn set_input(&mut self, i: usize, new_i: usize) {
+        match i {
+            0 => i0 = new_i,
+            1 => sel = new_i,
+            _ => panic!("Attempted to set invalid input.")
+        }
     }
 
-    // Inputs:
-    // 0 - line in
-    // 1 - control line
-    pub fn dmux_1b_2o1c() -> Self {
-        Gate::new_ns(2, 2, |inputs, outputs| {
-            if let (Some(opt_line_in), Some(opt_ctrl_line))
-                = (&inputs[0], &inputs[1]) {
-                if let Some(true) = opt_ctrl_line.get() {
-                    outputs[0].set(opt_line_in.get());
-                    outputs[1].set(Some(false));
-                } else if let Some(false) = opt_ctrl_line.get() {
-                    outputs[1].set(opt_line_in.get());
-                    outputs[0].set(Some(false));
-                } else {
-                    outputs[0].set(None);
-                    outputs[1].set(None);
-                }
-            } else {
-                outputs[0].set(None);
-                outputs[1].set(None);
-            }
-        })
+    fn num_inputs(&self) -> usize {
+        2
+    }
+
+    fn get_output(&self, o: usize) -> usize {
+        match o {
+            0 => self.o0,
+            1 => self.o1,
+            _ => panic!("Invalid output.")
+        }
+    }
+
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        match o {
+            0 => self.o0 = new_o,
+            1 => self.o1 = new_o,
+            _ => panic!("Attempting to set invalid output.")
+        }
+    }
+
+    fn num_ouputs(&self) -> usize {
+        2
+    }
+
+    fn eval(&self, circuit: &mut Circuit<Gate>) {
+        let tmp = circuit.lines[self.i0];
+        match circuit.lines[self.sel] {
+            HIGH => circuit.lines[self.o1] = tmp,
+            LOW => circuit.lines[self.o0] = tmp,
+            DISCONNECTED => DISCONNECTED
+        };
+    }
+}
+
+pub(crate) struct Source {
+    source: Line,
+    output: usize
+}
+
+impl Gate for Source {
+    fn get_input(&self, _i: usize) -> usize {
+        panic!("Sources have no inputs.");
+    }
+
+    fn set_input(&mut self, _i: usize, _new_i: usize) {
+        panic!("Sources have no inputs.");
+    }
+
+    fn num_inputs(&self) -> usize {
+        0
+    }
+
+    fn get_output(&self, o: usize) -> usize {
+        match o {
+            0 => self.output,
+            _ => panic!("Invalid output.")
+        }
+    }
+
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        match o {
+            0 => self.output = new_o,
+            _ => panic!("Attempting to set invalid output.")
+        }
+    }
+
+    fn num_ouputs(&self) -> usize {
+        1
+    }
+
+    fn eval(&self, circuit: &mut Circuit<Gate>) {
+        circuit.lines[self.output] = self.source;
+    }
+}
+
+pub(crate) struct Sink {
+    i0: usize,
+    pub(crate) sink: Line
+}
+
+impl Gate for Sink {
+    fn get_input(&self, _i: usize) -> usize {
+        match o {
+            0 => self.output,
+            _ => panic!("Invalid input.")
+        }
+    }
+
+    fn set_input(&mut self, _i: usize, _new_i: usize) {
+        match o {
+            0 => self.output = new_o,
+            _ => panic!("Attempting to set invalid output.")
+        }
+    }
+
+    fn num_inputs(&self) -> usize {
+        1
+    }
+
+    fn get_output(&self, o: usize) -> usize {
+        panic!("Sinks have no outputs.");
+    }
+
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        panic!("Sinks have no outputs.");
+    }
+
+    fn num_ouputs(&self) -> usize {
+        0
+    }
+
+    fn eval(&self, circuit: &mut Circuit<Gate>) {
+        unsafe { *(&self.sink as *const Line) } = circuit.lines[self.output];
     }
 }
