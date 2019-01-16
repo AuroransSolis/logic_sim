@@ -1,30 +1,85 @@
-use board::{gate::{Gate, Line, HIGH, LOW, not, and, or, xor, nand, nor, xnor}};
+use board::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
+use board::circuit::Circuit;
 
-impl Gate {
-    /// Spec:
-    /// 0: write 0 to master
-    /// 1: write 1 to master
-    /// 2: clock
-    pub fn master_slave_flip_flop() -> Self {
-        // Third `Line` is used as a flag to signify whether the write has been done on the trailing
-        // edge of the clock signal.
-        Gate::new_s(3, 2, 1, |inputs, storage, output| {
-            if inputs[2].get() {
-                storage[1] = LOW;
-                if xor(inputs[0].get(), inputs[1].get()) {
-                    if inputs[0].get() {
-                        storage[0] = LOW;
-                    } else if inputs[1].get() {
-                        storage[0] = Line::High;
-                    }
-                }
-            } else if and(inputs[2].get(), !storage[1]) {
-                output[0].set(storage[0]);
-                storage[1] = HIGH;
-            }
-        })
+use board::gate::Gate;
+
+struct MasterSlaveFlipFlop {
+    i0: usize,
+    i1: usize,
+    clock: usize,
+    master: Line,
+    slave: Line,
+    output: usize
+}
+
+impl MasterSlaveFlipFlop {
+    pub(crate) fn new(i0: usize, i1: usize, clock: usize, master_init: Line, slave_init: Line,
+        output: usize) -> Self {
+        MasterSlaveFlipFlop {
+            i0,
+            i1,
+            clock,
+            master: master_init,
+            slave: slave_init,
+            output
+        }
+    }
+}
+
+impl Gate for MasterSlaveFlipFlop {
+    fn get_input(&self, i: usize) -> usize {
+        match i {
+            0 => self.i0,
+            1 => self.i1,
+            2 => self.clock,
+            _ => panic!("Invalid input.")
+        }
     }
 
+    fn set_input(&mut self, i: usize, new_i: usize) {
+        match i {
+            0 => self.i0 = new_i,
+            1 => self.i1 = new_i,
+            2 => self.clock = new_i,
+            _ => panic!("Attempted to set invalid input.")
+        }
+    }
+
+    fn num_inputs(&self) -> usize {
+        3
+    }
+
+    fn get_output(&self, o: usize) -> usize {
+        match o {
+            0 => self.output,
+            _ => panic!("Invalid output.")
+        }
+    }
+
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        match o {
+            0 => self.output = new_o,
+            _ => panic!("Attempted to set invalid output.")
+        }
+    }
+
+    fn num_outputs(&self) -> usize {
+        1
+    }
+
+    fn eval(&mut self, circuit: &mut Circuit<Gate>) {
+        let current_output = circuit.lines[self.clock];
+        if current_output.is_high() {
+            let new_master = xor(circuit.lines[self.i0], circuit.lines[self.i1]);
+            circuit.lines[self.output] = new_master;
+        } else {
+            let new_slave = self.master;
+            self.slave = new_slave;
+        }
+    }
+}
+
+impl Gate {
     /// Spec:
     /// 0: set latch low
     /// 1: set latch high

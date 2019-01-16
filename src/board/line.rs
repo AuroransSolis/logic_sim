@@ -65,3 +65,26 @@ pub(crate) fn xnor(l0: Line, l1: Line) -> Line {
         LOW | DISCONNECTED => !l1
     }
 }
+
+impl Line {
+    pub(crate) fn is_high(&self) -> bool {
+        match self {
+            HIGH => true,
+            _ => false
+        }
+    }
+
+    pub(crate) fn is_low(&self) -> bool {
+        match self {
+            LOW => true,
+            _ => false
+        }
+    }
+
+    pub(crate) fn is_disconnected(&self) -> bool {
+        match self {
+            DISCONNECTED => true,
+            _ => false
+        }
+    }
+}
