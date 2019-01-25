@@ -73,7 +73,7 @@ impl Gate {
             Gate::NoStorage{input, ..} | Gate::Storage{input, ..} => input
         };
         inputs_ref.clear();
-        inputs_ref.extend(new_is.as_ref().iter().cloned());
+        inputs_ref.extend_from_slice(new_is.as_ref());
     }
 
     pub fn get_input(&self, i_ind: usize) -> Rc<Cell<Line>> {

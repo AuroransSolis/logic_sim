@@ -43,7 +43,7 @@ impl Gate {
     /// Control line LOW => output line 1
     /// Control line HIGH => output line 2
     /// Control line DISCONNECTED => output LOW
-    pub fn mux_1b_2i1c() -> Self {
+    pub fn mux_1b_2w() -> Self {
         Gate::new_ns(3, 1, |inputs, output| {
             if inputs[2].get().is_disconnected() {
                 output[0].set(Line::Low);
@@ -51,7 +51,7 @@ impl Gate {
                 if inputs[2].get().is_low() {
                     output[0].set(inputs[0].get());
                 } else {
-                    output[1].set(inputs[1].get());
+                    output[0].set(inputs[1].get());
                 }
             }
         })
@@ -63,7 +63,7 @@ impl Gate {
     /// Control line LOW => output on output line 1
     /// Control line HIGH => output on output line 2
     /// Control line DISCONNECTED => output DISCONNECTED on both output lines
-    pub fn dmux_1b_2o1c() -> Self {
+    pub fn dmux_1b_2w() -> Self {
         Gate::new_ns(2, 2, |inputs, outputs| {
             if inputs[1].get().is_disconnected() {
                 outputs[0].set(Line::Disconnected);
