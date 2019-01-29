@@ -39,6 +39,14 @@ impl Circuit {
         self.lines.len() - 1
     }
 
+    pub(crate) fn get_gate_input(&self, target_gate: usize, target_gate_input: usize) -> usize {
+        self.gates[target_gate].get_input(target_gate_input)
+    }
+
+    pub(crate) fn get_gate_output(&self, target_gate: usize, target_gate_output: usize) -> usize{
+        self.gates[target_gate].get_output(target_gate_output)
+    }
+
     pub(crate) fn set_line(&mut self, line: usize, state: Line) {
         self.lines[line] = state;
     }
