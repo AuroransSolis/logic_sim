@@ -353,6 +353,29 @@ fn bench_ram8_of_gates(c: &mut Criterion) {
     }));
 }
 
+fn bench_ram8_of_gates_const_single_eval(c: &mut Criterion) {
+    let addr = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
+    let write = Rc::new(Cell::new(Line::High));
+    let read = Rc::new(Cell::new(Line::High));
+    let clock = Rc::new(Cell::new(Line::High));
+    let write_val = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
+        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
+    let mut gates = make_8bx256_storage(addr.clone(), write_val.clone(), write.clone(),
+        read.clone(), clock.clone());
+    c.bench_function("Memory module (gates: 28664, const, single eval)", move |b| b.iter(|| {
+        black_box({
+            for gate in &mut gates {
+                gate.eval();
+            }
+        });
+    }));
+}
+
 use std::time::Duration;
 
 criterion_group!{
@@ -360,7 +383,8 @@ criterion_group!{
     config = Criterion::default().sample_size(10_000).measurement_time(Duration::from_secs(60));
     targets = bench_mux16_8w, bench_mux16_8w_const, bench_ram_8, bench_ram_8_const,
         bench_mux16_8w_gates, bench_mux16_8w_gates_const, bench_mux16_8w_conditionless,
-        bench_mux16_8w_conditionless_const, bench_ram8_of_gates
+        bench_mux16_8w_conditionless_const, bench_ram8_of_gates,
+        bench_ram8_of_gates_const_single_eval
 }
 
 criterion_main!{logic_benches}
