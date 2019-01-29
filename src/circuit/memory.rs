@@ -1,7 +1,7 @@
-use board::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
-use board::circuit::Circuit;
+use circuit::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
+use circuit::circuit::Circuit;
 
-use board::gate::Gate;
+use circuit::gate::Gate;
 
 struct MasterSlaveFlipFlop {
     i0: usize,
@@ -67,7 +67,7 @@ impl Gate for MasterSlaveFlipFlop {
         1
     }
 
-    fn eval(&mut self, circuit: &mut Circuit<Gate>) {
+    fn eval(&mut self, circuit: &mut Circuit) {
         let current_output = circuit.lines[self.clock];
         if current_output.is_high() {
             let new_master = xor(circuit.lines[self.i0], circuit.lines[self.i1]);

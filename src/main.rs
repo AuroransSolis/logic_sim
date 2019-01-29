@@ -4,12 +4,11 @@
 use std::rc::Rc;
 use std::cell::Cell;
 
-pub mod board;
+pub mod circuit;
 
-pub(crate) use board::gate::Gate;
-pub(crate) use board::circuit::Circuit;
-pub(crate) use board::board::Board;
-pub(crate) use board::basics;
+pub(crate) use circuit::gate::Gate;
+pub(crate) use circuit::circuit::Circuit;
+pub(crate) use circuit::basics;
 
 fn main() {
     println!("wewe");

@@ -1,4 +1,4 @@
-use board::circuit::Circuit;
+use circuit::circuit::Circuit;
 
 pub trait Gate {
     fn get_input(&self, i: usize) -> usize;
@@ -7,5 +7,5 @@ pub trait Gate {
     fn get_output(&self, o: usize) -> usize;
     fn set_output(&mut self, o: usize, new_o: usize);
     fn num_outputs(&self) -> usize;
-    fn eval(&self, circuit: &mut Circuit<Self>);
+    fn eval(&self, circuit: &mut Circuit);
 }

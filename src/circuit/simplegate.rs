@@ -1,5 +1,6 @@
-use board::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
-use board::circuit::Circuit;
+use circuit::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
+use circuit::circuit::Circuit;
+use circuit::gate::Gate;
 
 pub(crate) struct SimpleGate {
     i0: usize,
@@ -99,11 +100,11 @@ impl Gate for SimpleGate {
         }
     }
 
-    fn num_ouputs(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit<Gate>) {
+    fn eval(&self, circuit: &mut Circuit) {
         let tmp = self.function(circuit.lines[self.i0], circuit.lines[self.i1]);
         circuit.lines[self.output] = tmp;
     }

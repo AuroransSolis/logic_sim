@@ -5,4 +5,4 @@ pub mod simplegate;
 pub mod mux;
 pub mod memory;
 pub mod circuit;
-//pub mod board;
+//pub mod integrated_circuit;

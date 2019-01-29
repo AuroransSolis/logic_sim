@@ -1,4 +1,4 @@
-use board::{gate::Gate, line::Line, circuit::Circuit};
+use circuit::{gate::Gate, line::Line, circuit::Circuit};
 
 pub(crate) struct MUX_1_2 {
     i0: usize,
@@ -55,11 +55,11 @@ impl Gate for MUX_1_2 {
         }
     }
 
-    fn num_ouputs(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit<Gate>) {
+    fn eval(&self, circuit: &mut Circuit) {
         let tmp = match circuit.lines[self.sel] {
             HIGH => circuit.lines[self.i1],
             LOW => circuit.lines[self.i0],
@@ -124,11 +124,11 @@ impl Gate for DMUX_2_2 {
         }
     }
 
-    fn num_ouputs(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         2
     }
 
-    fn eval(&self, circuit: &mut Circuit<Gate>) {
+    fn eval(&self, circuit: &mut Circuit) {
         let tmp = circuit.lines[self.i0];
         match circuit.lines[self.sel] {
             HIGH => circuit.lines[self.o1] = tmp,

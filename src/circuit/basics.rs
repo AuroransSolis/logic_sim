@@ -1,4 +1,4 @@
-use board::{gate::Gate, line::Line, circuit::Circuit};
+use circuit::{gate::Gate, line::Line, circuit::Circuit};
 
 pub(crate) struct Source {
     source: Line,
@@ -32,11 +32,11 @@ impl Gate for Source {
         }
     }
 
-    fn num_ouputs(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit<Gate>) {
+    fn eval(&self, circuit: &mut Circuit) {
         circuit.lines[self.output] = self.source;
     }
 }
@@ -73,11 +73,11 @@ impl Gate for Sink {
         panic!("Sinks have no outputs.");
     }
 
-    fn num_ouputs(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         0
     }
 
-    fn eval(&self, circuit: &mut Circuit<Gate>) {
+    fn eval(&self, circuit: &mut Circuit) {
         unsafe { *(&self.sink as *const Line) } = circuit.lines[self.output];
     }
 }
