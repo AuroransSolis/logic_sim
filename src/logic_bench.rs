@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[macro_use] extern crate criterion;
 
 use criterion::{Criterion, black_box};
@@ -8,9 +10,6 @@ use circuit::line::Line;
 use circuit::gate::Gate;
 use circuit::circuit::Circuit;
 use circuit::memory::MSFFRAM8;
-
-use std::cell::Cell;
-use std::rc::Rc;
 
 struct MUX16_8W {
     inputs: [usize; 128 + 3],
@@ -52,8 +51,8 @@ impl Gate for MUX16_8W {
     }
 
     fn eval(&mut self, lines: &mut Vec<Line>) {
-        let which = (0..3).map(|i| (lines[self.inputs[128 + i]].into() as usize) << i)
-            .sum::<_>();
+        let which = (0..3).map(|i| (lines[self.inputs[128 + i]].is_high() as usize) << i)
+            .sum::<usize>();
         for i in 0..16 {
             let new = lines[self.inputs[which * 16 + i]];
             lines[self.outputs[i]] = new;
@@ -123,9 +122,9 @@ fn bench_ram_8(c: &mut Criterion) {
         write_val[i] = circuit.add_line(Line::Low);
         circuit.set_gate_input(mem, i, write_val[i - 8]);
     }
-    let mut write = circuit.add_line(Line::Low);
-    let mut read = circuit.add_line(Line::Low);
-    let mut clock = circuit.add_line(Line::Low);
+    let write = circuit.add_line(Line::Low);
+    let read = circuit.add_line(Line::Low);
+    let clock = circuit.add_line(Line::Low);
     let mut counter = 0;
     c.bench_function("Memory module WHRHCH", move |b| b.iter(|| {
         let tmp = circuit.get_line_state(addr[counter % 8]);
@@ -158,9 +157,9 @@ fn bench_ram_8_const(c: &mut Criterion) {
         write_val[i] = circuit.add_line(Line::Low);
         circuit.set_gate_input(mem, i, write_val[i - 8]);
     }
-    let mut write = circuit.add_line(Line::Low);
-    let mut read = circuit.add_line(Line::Low);
-    let mut clock = circuit.add_line(Line::Low);
+    let _write = circuit.add_line(Line::Low);
+    let _read = circuit.add_line(Line::Low);
+    let _clock = circuit.add_line(Line::Low);
     c.bench_function("Memory module WHRHCH (const)", move |b| b.iter(|| black_box(circuit.eval())));
 }
 
@@ -172,7 +171,7 @@ macro_rules! push {
     }
 }
 
-use circuit::mux::MUX_1_2;
+use circuit::mux::Mux1_2;
 
 fn bench_mux16_8w_gates(c: &mut Criterion) {
     let mut circuit = Circuit::new();
@@ -180,13 +179,13 @@ fn bench_mux16_8w_gates(c: &mut Criterion) {
     let mut second_layer_muxes = Vec::new();
     let mut third_layer_muxes = Vec::new();
     for _ in 0..16 {
-        let m00 = circuit.add_gate(MUX_1_2::new());
-        let m01 = circuit.add_gate(MUX_1_2::new());
-        let mo2 = circuit.add_gate(MUX_1_2::new());
-        let mo3 = circuit.add_gate(MUX_1_2::new());
-        let m10 = circuit.add_gate(MUX_1_2::new());
-        let m11 = circuit.add_gate(MUX_1_2::new());
-        let m20 = circuit.add_gate(MUX_1_2::new());
+        let m00 = circuit.add_gate(Mux1_2::new());
+        let m01 = circuit.add_gate(Mux1_2::new());
+        let m02 = circuit.add_gate(Mux1_2::new());
+        let m03 = circuit.add_gate(Mux1_2::new());
+        let m10 = circuit.add_gate(Mux1_2::new());
+        let m11 = circuit.add_gate(Mux1_2::new());
+        let m20 = circuit.add_gate(Mux1_2::new());
         circuit.connect_i_single(m10, 0, m00, 0);
         circuit.connect_i_single(m10, 1, m01, 0);
         circuit.connect_i_single(m11, 0, m02, 0);
@@ -236,13 +235,13 @@ fn bench_mux16_8w_gates_const(c: &mut Criterion) {
     let mut second_layer_muxes = Vec::new();
     let mut third_layer_muxes = Vec::new();
     for _ in 0..16 {
-        let m00 = circuit.add_gate(MUX_1_2::new());
-        let m01 = circuit.add_gate(MUX_1_2::new());
-        let mo2 = circuit.add_gate(MUX_1_2::new());
-        let mo3 = circuit.add_gate(MUX_1_2::new());
-        let m10 = circuit.add_gate(MUX_1_2::new());
-        let m11 = circuit.add_gate(MUX_1_2::new());
-        let m20 = circuit.add_gate(MUX_1_2::new());
+        let m00 = circuit.add_gate(Mux1_2::new());
+        let m01 = circuit.add_gate(Mux1_2::new());
+        let m02 = circuit.add_gate(Mux1_2::new());
+        let m03 = circuit.add_gate(Mux1_2::new());
+        let m10 = circuit.add_gate(Mux1_2::new());
+        let m11 = circuit.add_gate(Mux1_2::new());
+        let m20 = circuit.add_gate(Mux1_2::new());
         circuit.connect_i_single(m10, 0, m00, 0);
         circuit.connect_i_single(m10, 1, m01, 0);
         circuit.connect_i_single(m11, 0, m02, 0);
@@ -394,7 +393,7 @@ fn bench_ram8_of_gates(c: &mut Criterion) {
     let write = circuit.add_line(Line::Low);
     let read = circuit.add_line(Line::Low);
     let clock = circuit.add_line(Line::Low);
-    let read_lines = make_8bx256_storage(addr, write_val, write, read, clock, &mut circuit);
+    let _read_lines = make_8bx256_storage(addr, write_val, write, read, clock, &mut circuit);
     let mut counter = 0;
     c.bench_function("Memory module of gates", move |b| b.iter(|| {
         let tmp = circuit.get_line_state(addr[counter % 8]);
@@ -427,7 +426,7 @@ fn bench_ram8_of_gates_const(c: &mut Criterion) {
     let write = circuit.add_line(Line::Low);
     let read = circuit.add_line(Line::Low);
     let clock = circuit.add_line(Line::Low);
-    let read_lines = make_8bx256_storage(addr, write_val, write, read, clock, &mut circuit);
+    let _read_lines = make_8bx256_storage(addr, write_val, write, read, clock, &mut circuit);
     c.bench_function("Memory module of gates (const)", move |b| b.iter(|| {
         black_box(circuit.eval());
     }));
@@ -451,8 +450,7 @@ use circuit::basics::Inverter;
 // inputs: 0, 1
 // output: 7
 // gate count: 9
-fn make_ms_flip_flop(i0: usize, i1: usize, clock: usize, circuit: &mut Circuit) -> usize {
-    let mut gates = Vec::new();
+pub fn make_ms_flip_flop(i0: usize, i1: usize, clock: usize, circuit: &mut Circuit) -> usize {
     let m_and1 = circuit.add_gate(SimpleGate::and());
     circuit.set_gate_input(m_and1, 0, i0);
     circuit.set_gate_input(m_and1, 1, clock);
@@ -482,18 +480,17 @@ fn make_ms_flip_flop(i0: usize, i1: usize, clock: usize, circuit: &mut Circuit) 
     circuit.get_gate_output(s_xor1, 0)
 }
 
-fn make_1bx256_storage(input: usize, address: [usize; 8], write: usize, read: usize, clock: usize,
-    circuit: &mut Circuit) -> usize {
+pub fn make_1bx256_storage(input: usize, address: [usize; 8], write: usize, read: usize,
+    clock: usize, circuit: &mut Circuit) -> usize {
     let important_dmux_gates = make_1bx256_dmux(address, circuit);
-    circuit.set_gate_input(dmux_gates[0], 0, input);
-    dmux_gates[0].set_input(0, input);
+    circuit.set_gate_input(important_dmux_gates[0], 0, input);
     let important_mux_gates = make_1bx256_mux(address, circuit);
     for i in 0..256 {
         let inv = circuit.add_gate(Inverter::new());
-        circuit.connect_i_single(not, 0, dmux[i / 2], 0);
+        circuit.connect_i_single(inv, 0, important_dmux_gates[i / 2], i % 2);
         let gate_high = circuit.add_gate(SimpleGate::and());
         circuit.set_gate_input(gate_high, 0, clock);
-        circuit.connect_i_single(gate_high, 1, dmux_gates[i / 2], 0);
+        circuit.connect_i_single(gate_high, 1, important_dmux_gates[i / 2], i % 2);
         let gate_low = circuit.add_gate(SimpleGate::and());
         circuit.set_gate_input(gate_low, 0, clock);
         circuit.connect_i_single(gate_low, 1, inv, 0);
@@ -527,21 +524,21 @@ macro_rules! dmuxes {
     (($circuit: ident, $controls:ident) $($g0:ident, $g1:ident: $previous_dmux:expr,
         $controls_ind:literal),+) => {
         $(
-        let $g0 = $circuit.add_gate(DMUX_2_2::new());
+        let $g0 = $circuit.add_gate(Dmux1_2::new());
         $circuit.connect_i_single($g0, 0, $previous_dmux, 0);
         $circuit.set_gate_input($g0, 1, $controls[$controls_ind]);
-        let $g1 = $circuit.add_gate(DMUX_2_2::new());
+        let $g1 = $circuit.add_gate(Dmux1_2::new());
         $circuit.connect_i_single($g1, 0, $previous_dmux, 1);
         $circuit.set_gate_input($g1, 1, $controls[$controls_ind]);
         )+
     }
 }
 
-use circuit::mux::DMUX_2_2;
+use circuit::mux::Dmux1_2;
 
-fn make_1bx256_dmux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 129] {
+pub fn make_1bx256_dmux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 129] {
     let mut gates = Vec::new();
-    let dmux_70 = circuit.add_gate(DMUX_2_2::new());
+    let dmux_70 = circuit.add_gate(Dmux1_2::new());
     circuit.set_gate_input(dmux_70, 1, controls[7]);
     circuit.connect_i_single(dmux_70, 0, 2, 2);
     gates.push(dmux_70);
@@ -725,7 +722,7 @@ macro_rules! muxes {
     (($circuit:ident, $controls:ident) $($mux:ident: $previous_mux_0:expr, $previous_mux_1:expr,
         $controls_ind:literal),+) => {
         $(
-        let $mux = $circuit.add_gate(MUX_1_2::new());
+        let $mux = $circuit.add_gate(Mux1_2::new());
         $circuit.connect_i_single($mux, 0, $previous_mux_0, 0);
         $circuit.connect_i_single($mux, 1, $previous_mux_1, 0);
         $circuit.set_gate_input($mux, 2, $controls[$controls_ind]);
@@ -733,10 +730,10 @@ macro_rules! muxes {
     }
 }
 
-fn make_1bx256_mux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 129] {
+pub fn make_1bx256_mux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 129] {
     let mut gates = Vec::new();
     for _ in 0..128 {
-        let mux = circuit.add_gate(MUX_1_2::new());
+        let mux = circuit.add_gate(Mux1_2::new());
         circuit.set_gate_input(mux, 2, controls[7]);
         gates.push(mux);
     }
@@ -898,6 +895,6 @@ fn make_1bx256_mux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 129] 
     for i in 0..128 {
         inputs_and_output[i] = gates[i];
     }
-    inputs_and_output[129] = gates[gates.len() - 1];
+    inputs_and_output[128] = gates[gates.len() - 1];
     inputs_and_output
 }

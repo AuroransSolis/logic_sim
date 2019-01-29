@@ -1,4 +1,4 @@
-use circuit::{gate::Gate, line::Line, circuit::Circuit};
+use circuit::{gate::Gate, line::Line};
 
 pub struct Source {
     source: Line,
@@ -84,11 +84,11 @@ impl Gate for Sink {
         1
     }
 
-    fn get_output(&self, o: usize) -> usize {
+    fn get_output(&self, _o: usize) -> usize {
         panic!("Sinks have no outputs.");
     }
 
-    fn set_output(&mut self, o: usize, new_o: usize) {
+    fn set_output(&mut self, _o: usize, _new_o: usize) {
         panic!("Sinks have no outputs.");
     }
 

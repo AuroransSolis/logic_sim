@@ -1,5 +1,4 @@
-use circuit::line::{Line, and, or, xor, nand, nor, xnor};
-use circuit::circuit::Circuit;
+use circuit::line::{Line, xor};
 
 use circuit::gate::Gate;
 
@@ -81,7 +80,6 @@ pub struct MasterSlaveFlipFlop {
     i1: usize,
     clock: usize,
     master: Line,
-    slave: Line,
     output: usize
 }
 
@@ -92,7 +90,6 @@ impl MasterSlaveFlipFlop {
             i1: 0,
             clock: 0,
             master: Line::Low,
-            slave: Line::Low,
             output: 0
         }
     }
@@ -140,12 +137,12 @@ impl Gate for MasterSlaveFlipFlop {
     }
 
     fn eval(&mut self, lines: &mut Vec<Line>) {
-        if lines[self.clock].is_high() {
-            let new_master = xor(lines[self.i0], lines[self.i1]);
-            lines[self.output] = new_master;
-        } else {
+        if lines[self.clock].is_high() && xor(lines[self.i0], lines[self.i1]).is_high() {
+            let new_master = lines[self.i0];
+            self.master = new_master;
+        } else if lines[self.clock].is_low() {
             let new_slave = self.master;
-            self.slave = new_slave;
+            lines[self.output] = new_slave;
         }
     }
 }
@@ -225,7 +222,7 @@ impl Gate for NORLatchRAM8 {
 /// 17: read
 /// 18: clock
 pub struct MSFFRAM8 {
-    inputs: [usize; 18],
+    inputs: [usize; 19],
     storage: [bool; 256 * 8 * 2 + 1],
     outputs: [usize; 8]
 }
@@ -233,7 +230,7 @@ pub struct MSFFRAM8 {
 impl MSFFRAM8 {
     pub(crate) fn new() -> Self {
         MSFFRAM8 {
-            inputs: [0; 18],
+            inputs: [0; 19],
             storage: [false; 256 * 8 * 2 + 1],
             outputs: [0; 8]
         }

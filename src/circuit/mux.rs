@@ -1,15 +1,15 @@
-use circuit::{gate::Gate, line::Line, circuit::Circuit};
+use circuit::{gate::Gate, line::Line};
 
-pub(crate) struct MUX_1_2 {
+pub struct Mux1_2 {
     i0: usize,
     i1: usize,
     sel: usize,
     output: usize
 }
 
-impl MUX_1_2 {
+impl Mux1_2 {
     pub(crate) fn new() -> Self {
-        MUX_1_2 {
+        Mux1_2 {
             i0: 0,
             i1: 0,
             sel: 0,
@@ -18,7 +18,7 @@ impl MUX_1_2 {
     }
 }
 
-impl Gate for MUX_1_2 {
+impl Gate for Mux1_2 {
     fn get_input(&self, i: usize) -> usize {
         match i {
             0 => self.i0,
@@ -69,16 +69,16 @@ impl Gate for MUX_1_2 {
     }
 }
 
-pub(crate) struct DMUX_2_2 {
+pub struct Dmux1_2 {
     i0: usize,
     sel: usize,
     o0: usize,
     o1: usize
 }
 
-impl DMUX_2_2 {
+impl Dmux1_2 {
     pub(crate) fn new() -> Self {
-        DMUX_2_2 {
+        Dmux1_2 {
             i0: 0,
             sel: 0,
             o0: 0,
@@ -87,7 +87,7 @@ impl DMUX_2_2 {
     }
 }
 
-impl Gate for DMUX_2_2 {
+impl Gate for Dmux1_2 {
     fn get_input(&self, i: usize) -> usize {
         match i {
             0 => self.i0,

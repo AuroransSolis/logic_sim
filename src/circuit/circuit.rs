@@ -1,7 +1,3 @@
-use std::rc::Rc;
-use std::cell::Cell;
-use std::cmp::Ordering;
-
 use circuit::gate::Gate;
 use circuit::line::Line;
 
@@ -97,7 +93,6 @@ impl Circuit {
     pub(crate) fn remove_gate(&mut self, gate: usize) {
         let outputs = (0..self.gates[gate].num_outputs()).map(|o| self.gates[gate].get_output(o))
             .collect::<Vec<_>>();
-        let amt_to_remove = outputs.len() + self.gates[gate].num_inputs();
         if self.gates[gate].num_inputs() == 0 {
             for i in (0..self.outputs.len()).rev() {
                 if outputs.contains(&self.outputs[i]) {
@@ -112,13 +107,13 @@ impl Circuit {
                     g.set_input(i, 0);
                 } else {
                     let ind = g.get_input(i);
-                    let shift = outputs.iter().filter(|&&output_ind| output_ind <= ind).count();
+                    let shift = outputs.iter().take_while(|&&output_ind| output_ind < ind).count();
                     g.set_input(i, ind - shift);
                 }
             }
             for o in 0..g.num_outputs() {
                 let ind = g.get_output(o);
-                let shift = outputs.iter().filter(|&&output_ind| output_ind <= ind).count();
+                let shift = outputs.iter().take_while(|&&output_ind| output_ind < ind).count();
                 g.set_output(o, ind - shift);
             }
         }

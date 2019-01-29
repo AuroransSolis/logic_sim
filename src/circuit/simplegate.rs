@@ -1,5 +1,4 @@
-use circuit::line::{Line, not, and, or, xor, nand, nor, xnor};
-use circuit::circuit::Circuit;
+use circuit::line::{Line, and, or, xor, nand, nor, xnor};
 use circuit::gate::Gate;
 
 pub(crate) struct SimpleGate {
