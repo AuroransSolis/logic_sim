@@ -119,7 +119,7 @@ fn bench_ram_8(c: &mut Criterion) {
     }
     let mut write_val = [0; 8];
     for i in 8..16 {
-        write_val[i] = circuit.add_line(Line::Low);
+        write_val[i - 8] = circuit.add_line(Line::Low);
         circuit.set_gate_input(mem, i, write_val[i - 8]);
     }
     let write = circuit.add_line(Line::Low);
@@ -154,7 +154,7 @@ fn bench_ram_8_const(c: &mut Criterion) {
     }
     let mut write_val = [0; 8];
     for i in 8..16 {
-        write_val[i] = circuit.add_line(Line::Low);
+        write_val[i - 8] = circuit.add_line(Line::Low);
         circuit.set_gate_input(mem, i, write_val[i - 8]);
     }
     let _write = circuit.add_line(Line::Low);
@@ -436,7 +436,7 @@ use std::time::Duration;
 
 criterion_group!{
     name = logic_benches;
-    config = Criterion::default().sample_size(5).measurement_time(Duration::from_secs(60));
+    config = Criterion::default().sample_size(10_000).measurement_time(Duration::from_secs(60));
     targets = bench_mux16_8w, bench_mux16_8w_const, bench_ram_8, bench_ram_8_const,
         bench_mux16_8w_gates, bench_mux16_8w_gates_const, bench_mux16_8w_conditionless,
         bench_mux16_8w_conditionless_const, bench_ram8_of_gates, bench_ram8_of_gates_const
@@ -540,7 +540,6 @@ pub fn make_1bx256_dmux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 
     let mut gates = Vec::new();
     let dmux_70 = circuit.add_gate(Dmux1_2::new());
     circuit.set_gate_input(dmux_70, 1, controls[7]);
-    circuit.connect_i_single(dmux_70, 0, 2, 2);
     gates.push(dmux_70);
     dmuxes! { (circuit, controls)
         dmux_60, dmux_61: dmux_70, 6,

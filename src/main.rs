@@ -127,7 +127,6 @@ pub fn make_1bx256_dmux(controls: [usize; 8], circuit: &mut Circuit) -> [usize; 
     let mut gates = Vec::new();
     let dmux_70 = circuit.add_gate(Dmux1_2::new());
     circuit.set_gate_input(dmux_70, 1, controls[7]);
-    circuit.connect_i_single(dmux_70, 0, 2, 2);
     gates.push(dmux_70);
     dmuxes! { (circuit, controls)
         dmux_60, dmux_61: dmux_70, 6,
