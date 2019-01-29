@@ -6,143 +6,162 @@ pub mod circuit;
 
 use circuit::line::Line;
 use circuit::gate::Gate;
+use circuit::circuit::Circuit;
+use circuit::memory::MSFFRAM8;
 
 use std::cell::Cell;
 use std::rc::Rc;
 
-fn bench_mux16_8w(c: &mut Criterion) {
-    let mut mux = Gate::new_ns(128 + 3, 16, |inputs, outputs| {
-        if !inputs[128].get().is_disconnected() && !inputs[129].get().is_disconnected()
-            && !inputs[130].get().is_disconnected() {
-            let select = {
-                let mut total = 0;
-                for i in 0..3 {
-                    if inputs[128 + i].get().is_high() {
-                        total += 1 << i;
-                    }
-                }
-                total
-            };
-            for i in 0..16 {
-                outputs[i].set(inputs[select * 16 + i].get());
-            }
+struct MUX16_8W {
+    inputs: [usize; 128 + 3],
+    outputs: [usize; 16]
+}
+
+impl MUX16_8W {
+    pub(crate) fn new() -> Self {
+        MUX16_8W {
+            inputs: [0; 128 + 3],
+            outputs: [0; 16]
         }
-    });
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
+    }
+}
+
+impl Gate for MUX16_8W {
+    fn get_input(&self, i: usize) -> usize {
+        self.inputs[i]
+    }
+
+    fn set_input(&mut self, i: usize, new_i: usize) {
+        self.inputs[i] = new_i;
+    }
+
+    fn num_inputs(&self) -> usize {
+        128 + 3
+    }
+
+    fn get_output(&self, o: usize) -> usize {
+        self.outputs[o]
+    }
+
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        self.outputs[o] = new_o;
+    }
+
+    fn num_outputs(&self) -> usize {
+        16
+    }
+
+    fn eval(&mut self, circuit: &mut Circuit) {
+        let which = (0..3).map(|i| (circuit.lines[self.inputs[128 + i]].into() as usize) << i)
+            .sum::<_>();
+        for i in 0..16 {
+            let new = circuit.lines[self.inputs[which * 16 + i]];
+            circuit.lines[self.outputs[i]] = new;
+        }
+    }
+}
+
+fn bench_mux16_8w(c: &mut Criterion) {
+    let mut circuit = Circuit::new();
+    let mux = circuit.add_gate(MUX16_8W::new());
     let mut inputs = Vec::new();
     for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
+        inputs.push(circuit.add_line(Line::Low));
     }
-    for i in 0..3 {
-        mux.set_input(128 + i, controls[i].clone());
+    let mut controls = Vec::new();
+    for _ in 0..3 {
+        controls.push(circuit.add_line(Line::Low));
     }
     for i in 0..128 {
-        mux.set_input(i, inputs[i].clone());
+        circuit.set_gate_input(mux, i, inputs[i]);
+    }
+    for i in 128..128 + 3 {
+        circuit.set_gate_input(mux, i, controls[i - 128]);
     }
     let mut counter = 0;
     c.bench_function("MUX gate", move |b| b.iter(|| {
-        let tmp = inputs[counter % 128].get();
-        inputs[counter % 128].set(!tmp);
+        let tmp = circuit.get_line_state(inputs[counter % 128]);
+        circuit.set_line(inputs[counter % 128], !tmp);
         for i in 0..3 {
-            controls[i].set((counter >> i & 1 == 1).into());
+            circuit.set_line(controls[i], (counter >> i & 1 == 1).into());
         };
-        mux.eval();
+        circuit.eval();
         counter += 1;
     }));
 }
 
 fn bench_mux16_8w_const(c: &mut Criterion) {
-    let mut mux = Gate::new_ns(128 + 3, 16, |inputs, outputs| {
-        if !inputs[128].get().is_disconnected() && !inputs[129].get().is_disconnected()
-            && !inputs[130].get().is_disconnected() {
-            let select = {
-                let mut total = 0;
-                for i in 0..3 {
-                    if inputs[128 + i].get().is_high() {
-                        total += 1 << i;
-                    }
-                }
-                total
-            };
-            for i in 0..16 {
-                outputs[i].set(inputs[select * 16 + i].get());
-            }
-        }
-    });
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
+    let mut circuit = Circuit::new();
+    let mux = circuit.add_gate(MUX16_8W::new());
     let mut inputs = Vec::new();
     for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
+        inputs.push(circuit.add_line(Line::Low));
     }
-    for i in 0..3 {
-        mux.set_input(128 + i, controls[i].clone());
+    let mut controls = Vec::new();
+    for _ in 0..3 {
+        controls.push(circuit.add_line(Line::Low));
     }
     for i in 0..128 {
-        mux.set_input(i, inputs[i].clone());
+        circuit.set_gate_input(mux, i, inputs[i]);
     }
-    c.bench_function("MUX gate (const)", move |b| b.iter(|| black_box(mux.eval())));
+    for i in 128..128 + 3 {
+        circuit.set_gate_input(mux, i, controls[i - 128]);
+    }
+    c.bench_function("MUX gate (const)", move |b| b.iter(|| black_box(circuit.eval())));
 }
 
 fn bench_ram_8(c: &mut Criterion) {
-    let mut ram_8 = Gate::nor_latch_ram_8();
-    let addr = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
-    let write = Rc::new(Cell::new(Line::High));
-    let read = Rc::new(Cell::new(Line::High));
-    let clock = Rc::new(Cell::new(Line::High));
-    let write_val = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
+    let mut circuit = Circuit::new();
+    let mem = circuit.add_gate(MSFFRAM8::new());
+    let mut addr = [0; 8];
     for i in 0..8 {
-        ram_8.set_input(i, addr[i].clone());
-        ram_8.set_input(8 + i, write_val[i].clone());
+        addr[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mem, i, addr[i]);
     }
-    ram_8.set_input(16, write.clone());
-    ram_8.set_input(17, read.clone());
-    ram_8.set_input(18, clock.clone());
+    let mut write_val = [0; 8];
+    for i in 8..16 {
+        write_val[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mem, i, write_val[i - 8]);
+    }
+    let mut write = circuit.add_line(Line::Low);
+    let mut read = circuit.add_line(Line::Low);
+    let mut clock = circuit.add_line(Line::Low);
     let mut counter = 0;
     c.bench_function("Memory module WHRHCH", move |b| b.iter(|| {
-        let tmp = addr[counter % 8].get();
-        addr[counter % 8].set(!tmp);
-        let tmp = write_val[7 - (counter % 8)].get();
-        write_val[7 - (counter % 8)].set(!tmp);
-        write.set(Line::High);
-        ram_8.eval();
-        write.set(Line::Low);
-        read.set(Line::High);
-        ram_8.eval();
-        read.set(Line::Low);
-        ram_8.eval();
+        let tmp = circuit.get_line_state(addr[counter % 8]);
+        circuit.set_line(addr[counter % 8], !tmp);
+        let tmp = circuit.get_line_state(write_val[7 - (counter % 8)]);
+        circuit.set_line(write_val[7 - (counter % 8)], !tmp);
+        circuit.set_line(write, Line::High);
+        circuit.set_line(clock, Line::High);
+        circuit.eval();
+        circuit.set_line(write, Line::Low);
+        circuit.set_line(clock, Line::Low);
+        circuit.set_line(read, Line::High);
+        circuit.eval();
+        circuit.set_line(read, Line::Low);
+        circuit.eval();
         counter += 1;
     }));
 }
 
 fn bench_ram_8_const(c: &mut Criterion) {
-    let mut ram_8 = Gate::nor_latch_ram_8();
-    let addr = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
-    let write = Rc::new(Cell::new(Line::High));
-    let read = Rc::new(Cell::new(Line::High));
-    let clock = Rc::new(Cell::new(Line::High));
-    let write_val = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low))];
+    let mut circuit = Circuit::new();
+    let mem = circuit.add_gate(MSFFRAM8::new());
+    let mut addr = [0; 8];
     for i in 0..8 {
-        ram_8.set_input(i, addr[i].clone());
-        ram_8.set_input(8 + i, write_val[i].clone());
+        addr[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mem, i, addr[i]);
     }
-    ram_8.set_input(16, write.clone());
-    ram_8.set_input(17, read.clone());
-    ram_8.set_input(18, clock.clone());
-    c.bench_function("Memory module WHRHCH (const)", move |b| b.iter(|| black_box(ram_8.eval())));
+    let mut write_val = [0; 8];
+    for i in 8..16 {
+        write_val[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mem, i, write_val[i - 8]);
+    }
+    let mut write = circuit.add_line(Line::Low);
+    let mut read = circuit.add_line(Line::Low);
+    let mut clock = circuit.add_line(Line::Low);
+    c.bench_function("Memory module WHRHCH (const)", move |b| b.iter(|| black_box(circuit.eval())));
 }
 
 macro_rules! push {
@@ -153,166 +172,212 @@ macro_rules! push {
     }
 }
 
-fn make_8_way_mux(inputs: [Rc<Cell<Line>>; 8], s0: Rc<Cell<Line>>, s1: Rc<Cell<Line>>,
-    s2: Rc<Cell<Line>>) -> Vec<Gate> {
-    let mut gates = Vec::new();
-    let mut mux_00 = Gate::mux_1b_2w();
-    mux_00.set_input(0, inputs[0].clone());
-    mux_00.set_input(1, inputs[1].clone());
-    mux_00.set_input(2, s0.clone());
-    let mut mux_01 = Gate::mux_1b_2w();
-    mux_01.set_input(0, inputs[2].clone());
-    mux_01.set_input(1, inputs[3].clone());
-    mux_01.set_input(2, s0.clone());
-    let mut mux_02 = Gate::mux_1b_2w();
-    mux_02.set_input(0, inputs[4].clone());
-    mux_02.set_input(1, inputs[5].clone());
-    mux_02.set_input(2, s0.clone());
-    let mut mux_03 = Gate::mux_1b_2w();
-    mux_03.set_input(0, inputs[6].clone());
-    mux_03.set_input(1, inputs[7].clone());
-    mux_03.set_input(2, s0.clone());
-    let mut mux_10 = Gate::mux_1b_2w();
-    mux_10.set_input(0, mux_00.get_output(0).clone());
-    mux_10.set_input(1, mux_01.get_output(0).clone());
-    mux_10.set_input(2, s1.clone());
-    let mut mux_11 = Gate::mux_1b_2w();
-    mux_11.set_input(0, mux_02.get_output(0).clone());
-    mux_11.set_input(1, mux_03.get_output(0).clone());
-    mux_11.set_input(2, s1.clone());
-    let mut mux_20 = Gate::mux_1b_2w();
-    mux_20.set_input(0, mux_10.get_output(0).clone());
-    mux_20.set_input(1, mux_11.get_output(0).clone());
-    mux_20.set_input(2, s2.clone());
-    push!{gates: mux_00, mux_01, mux_02, mux_03, mux_10, mux_11, mux_20};
-    gates
-}
+use circuit::mux::MUX_1_2;
 
 fn bench_mux16_8w_gates(c: &mut Criterion) {
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
-    let mut inputs = Vec::new();
-    for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
+    let mut circuit = Circuit::new();
+    let mut first_layer_muxes = Vec::new();
+    let mut second_layer_muxes = Vec::new();
+    let mut third_layer_muxes = Vec::new();
+    for _ in 0..16 {
+        let m00 = circuit.add_gate(MUX_1_2::new());
+        let m01 = circuit.add_gate(MUX_1_2::new());
+        let mo2 = circuit.add_gate(MUX_1_2::new());
+        let mo3 = circuit.add_gate(MUX_1_2::new());
+        let m10 = circuit.add_gate(MUX_1_2::new());
+        let m11 = circuit.add_gate(MUX_1_2::new());
+        let m20 = circuit.add_gate(MUX_1_2::new());
+        circuit.connect_i_single(m10, 0, m00, 0);
+        circuit.connect_i_single(m10, 1, m01, 0);
+        circuit.connect_i_single(m11, 0, m02, 0);
+        circuit.connect_i_single(m11, 1, m03, 0);
+        circuit.connect_i_single(m20, 0, m10, 0);
+        circuit.connect_i_single(m20, 1, m11, 0);
+        push!(first_layer_muxes: m00, m01, m02, m03);
+        push!(second_layer_muxes: m10, m11);
+        third_layer_muxes.push(m20);
     }
-    let mut mux_gates = Vec::new();
-    for i in 0..16 {
-        mux_gates.append(&mut make_8_way_mux([inputs[8 * i].clone(), inputs[8 * i + 1].clone(),
-            inputs[8 * i + 2].clone(), inputs[8 * i + 3].clone(), inputs[8 * i + 4].clone(),
-            inputs[8 * i + 5].clone(), inputs[8 * i + 6].clone(), inputs[8 * i + 7].clone()],
-            controls[2].clone(), controls[1].clone(), controls[0].clone()));
+    let mut controls = [0; 3];
+    controls[0] = circuit.add_line(Line::Low);
+    for mux in &third_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    controls[1] = circuit.add_line(Line::Low);
+    for mux in &second_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    controls[2] = circuit.add_line(Line::Low);
+    for mux in &first_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    let mut inputs = [0; 128];
+    for i in 0..8 {
+        for j in 0..16 {
+            let new_line = circuit.add_line(Line::Low);
+            inputs[i * 16 + j] = new_line;
+            circuit.set_gate_input(first_layer_muxes[j * 4 + i / 2], i % 2, new_line);
+        }
     }
     let mut counter = 0;
     c.bench_function("MUX gate of `Gate`s", move |b| b.iter(|| {
-        let tmp = inputs[counter % 128].get();
-        inputs[counter % 128].set(!tmp);
+        let tmp = circuit.get_line_state(inputs[counter % 128]);
+        circuit.set_line(inputs[counter % 128], !tmp);
         for i in 0..3 {
-            controls[i].set((counter >> i & 1 == 1).into());
+            circuit.set_line(controls[i], (counter >> i & 1 == 1).into());
         };
-        for gate in &mut mux_gates {
-            gate.eval();
-        }
+        circuit.eval();
         counter += 1;
     }));
 }
 
 fn bench_mux16_8w_gates_const(c: &mut Criterion) {
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
-    let mut inputs = Vec::new();
-    for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
+    let mut circuit = Circuit::new();
+    let mut first_layer_muxes = Vec::new();
+    let mut second_layer_muxes = Vec::new();
+    let mut third_layer_muxes = Vec::new();
+    for _ in 0..16 {
+        let m00 = circuit.add_gate(MUX_1_2::new());
+        let m01 = circuit.add_gate(MUX_1_2::new());
+        let mo2 = circuit.add_gate(MUX_1_2::new());
+        let mo3 = circuit.add_gate(MUX_1_2::new());
+        let m10 = circuit.add_gate(MUX_1_2::new());
+        let m11 = circuit.add_gate(MUX_1_2::new());
+        let m20 = circuit.add_gate(MUX_1_2::new());
+        circuit.connect_i_single(m10, 0, m00, 0);
+        circuit.connect_i_single(m10, 1, m01, 0);
+        circuit.connect_i_single(m11, 0, m02, 0);
+        circuit.connect_i_single(m11, 1, m03, 0);
+        circuit.connect_i_single(m20, 0, m10, 0);
+        circuit.connect_i_single(m20, 1, m11, 0);
+        push!(first_layer_muxes: m00, m01, m02, m03);
+        push!(second_layer_muxes: m10, m11);
+        third_layer_muxes.push(m20);
     }
-    let mut mux_gates = Vec::new();
-    for i in 0..16 {
-        mux_gates.append(&mut make_8_way_mux([inputs[8 * i].clone(), inputs[8 * i + 1].clone(),
-            inputs[8 * i + 2].clone(), inputs[8 * i + 3].clone(), inputs[8 * i + 4].clone(),
-            inputs[8 * i + 5].clone(), inputs[8 * i + 6].clone(), inputs[8 * i + 7].clone()],
-            controls[2].clone(), controls[1].clone(), controls[0].clone()));
+    let mut controls = [0; 3];
+    controls[0] = circuit.add_line(Line::Low);
+    for mux in &third_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    controls[1] = circuit.add_line(Line::Low);
+    for mux in &second_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    controls[2] = circuit.add_line(Line::Low);
+    for mux in &first_layer_muxes {
+        circuit.set_gate_input(*mux, 2, controls[0]);
+    }
+    let mut inputs = [0; 128];
+    for i in 0..8 {
+        for j in 0..16 {
+            let new_line = circuit.add_line(Line::Low);
+            inputs[i * 16 + j] = new_line;
+            circuit.set_gate_input(first_layer_muxes[j * 4 + i / 2], i % 2, new_line);
+        }
     }
     c.bench_function("MUX gate of `Gate`s (const)", move |b| b.iter(|| {
-        for gate in &mut mux_gates {
-            black_box(gate.eval());
-        }
+        black_box(circuit.eval())
     }));
 }
 
-fn bench_mux16_8w_conditionless(c: &mut Criterion) {
-    let mut mux = Gate::new_ns(131, 16, |inputs, outputs| {
+struct ConditionlessMux8_16w {
+    inputs: [usize; 128 + 3],
+    outputs: [usize; 16]
+}
+
+impl ConditionlessMux8_16w {
+    fn new() -> Self {
+        ConditionlessMux8_16w {
+            inputs: [0; 128 + 3],
+            outputs: [0; 16]
+        }
+    }
+}
+
+impl Gate for ConditionlessMux8_16w {
+    fn get_input(&self, i: usize) -> usize {
+        self.inputs[i]
+    }
+    
+    fn set_input(&mut self, i: usize, new_i: usize) {
+        self.inputs[i] = new_i;
+    }
+    
+    fn num_inputs(&self) -> usize {
+        128 + 3
+    }
+    
+    fn get_output(&self, o: usize) -> usize {
+        self.outputs[o]
+    }
+    
+    fn set_output(&mut self, o: usize, new_o: usize) {
+        self.outputs[o] = new_o;
+    }
+    
+    fn num_outputs(&self) -> usize {
+        16
+    }
+    
+    fn eval(&mut self, lines: &mut Vec<Line>) {
         let gates = [
-            !inputs[128].get() & !inputs[129].get() & !inputs[130].get(),
-            !inputs[128].get() & !inputs[129].get() &  inputs[130].get(),
-            !inputs[128].get() &  inputs[129].get() & !inputs[130].get(),
-            !inputs[128].get() &  inputs[129].get() &  inputs[130].get(),
-             inputs[128].get() & !inputs[129].get() & !inputs[130].get(),
-             inputs[128].get() & !inputs[129].get() &  inputs[130].get(),
-             inputs[128].get() &  inputs[129].get() & !inputs[130].get(),
-             inputs[128].get() &  inputs[129].get() &  inputs[130].get()
+            !lines[self.inputs[128]] * !lines[self.inputs[129]] * !lines[self.inputs[130]],
+            !lines[self.inputs[128]] * !lines[self.inputs[129]] *  lines[self.inputs[130]],
+            !lines[self.inputs[128]] *  lines[self.inputs[129]] * !lines[self.inputs[130]],
+            !lines[self.inputs[128]] *  lines[self.inputs[129]] *  lines[self.inputs[130]],
+             lines[self.inputs[128]] * !lines[self.inputs[129]] * !lines[self.inputs[130]],
+             lines[self.inputs[128]] * !lines[self.inputs[129]] *  lines[self.inputs[130]],
+             lines[self.inputs[128]] *  lines[self.inputs[129]] * !lines[self.inputs[130]],
+             lines[self.inputs[128]] *  lines[self.inputs[129]] *  lines[self.inputs[130]]
         ];
         for i in 0..16 {
             for j in 0..8 {
-                let n = inputs[i + j * 16].get() & gates[j] | outputs[i].get();
-                outputs[i].set(n);
+                let n = lines[self.inputs[i + j * 16]] * gates[j] + lines[self.outputs[i]];
+                lines[self.outputs[i]] = n;
             }
         }
-    });
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
-    let mut inputs = Vec::new();
-    for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
     }
+}
+
+fn bench_mux16_8w_conditionless(c: &mut Criterion) {
+    let mut circuit = Circuit::new();
+    let mux = circuit.add_gate(ConditionlessMux8_16w::new());
+    let mut controls = [0; 3];
     for i in 0..3 {
-        mux.set_input(128 + i, controls[i].clone());
+        controls[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mux, 128 + i, controls[i]);
     }
+    let mut inputs = [0; 128];
     for i in 0..128 {
-        mux.set_input(i, inputs[i].clone());
+        inputs[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mux, i, inputs[i]);
     }
     let mut counter = 0;
     c.bench_function("MUX gate without conditionals", move |b| b.iter(|| {
-        let tmp = inputs[counter % 128].get();
-        inputs[counter % 128].set(!tmp);
+        let tmp = circuit.get_line_state(inputs[counter % 128]);
+        circuit.set_line(inputs[counter % 128], !tmp);
         for i in 0..3 {
-            controls[i].set((counter >> i & 1 == 1).into());
+            circuit.set_line(controls[i], (counter >> i & 1 == 1).into());
         };
-        mux.eval();
+        circuit.eval();
         counter += 1;
     }));
 }
 
 fn bench_mux16_8w_conditionless_const(c: &mut Criterion) {
-    let mut mux = Gate::new_ns(131, 16, |inputs, outputs| {
-        let gates = [
-            !inputs[128].get() & !inputs[129].get() & !inputs[130].get(),
-            !inputs[128].get() & !inputs[129].get() &  inputs[130].get(),
-            !inputs[128].get() &  inputs[129].get() & !inputs[130].get(),
-            !inputs[128].get() &  inputs[129].get() &  inputs[130].get(),
-            inputs[128].get() & !inputs[129].get() & !inputs[130].get(),
-            inputs[128].get() & !inputs[129].get() &  inputs[130].get(),
-            inputs[128].get() &  inputs[129].get() & !inputs[130].get(),
-            inputs[128].get() &  inputs[129].get() &  inputs[130].get()
-        ];
-        for i in 0..16 {
-            for j in 0..8 {
-                let n = inputs[i + j * 16].get() & gates[j] | outputs[i].get();
-                outputs[i].set(n);
-            }
-        }
-    });
-    let controls = [Rc::new(Cell::new(Line::Low)), Rc::new(Cell::new(Line::Low)),
-        Rc::new(Cell::new(Line::Low))];
-    let mut inputs = Vec::new();
-    for _ in 0..128 {
-        inputs.push(Rc::new(Cell::new(Line::Low)));
-    }
+    let mut circuit = Circuit::new();
+    let mux = circuit.add_gate(ConditionlessMux8_16w::new());
+    let mut controls = [0; 3];
     for i in 0..3 {
-        mux.set_input(128 + i, controls[i].clone());
+        controls[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mux, 128 + i, controls[i]);
     }
+    let mut inputs = [0; 128];
     for i in 0..128 {
-        mux.set_input(i, inputs[i].clone());
+        inputs[i] = circuit.add_line(Line::Low);
+        circuit.set_gate_input(mux, i, inputs[i]);
     }
     c.bench_function("MUX gate without conditionals (const)", move |b| b.iter(|| {
-        black_box(mux.eval());
+        black_box(circuit.eval());
     }));
 }
 

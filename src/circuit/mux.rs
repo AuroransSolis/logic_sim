@@ -8,12 +8,12 @@ pub(crate) struct MUX_1_2 {
 }
 
 impl MUX_1_2 {
-    pub(crate) fn new(i0: usize, i1: usize, sel: usize, output: usize) -> Self {
+    pub(crate) fn new() -> Self {
         MUX_1_2 {
-            i0,
-            i1,
-            sel,
-            output
+            i0: 0,
+            i1: 0,
+            sel: 0,
+            output: 0
         }
     }
 }
@@ -21,18 +21,18 @@ impl MUX_1_2 {
 impl Gate for MUX_1_2 {
     fn get_input(&self, i: usize) -> usize {
         match i {
-            0 => i0,
-            1 => i1,
-            2 => sel,
+            0 => self.i0,
+            1 => self.i1,
+            2 => self.sel,
             _ => panic!("Invalid input.")
         }
     }
 
     fn set_input(&mut self, i: usize, new_i: usize) {
         match i {
-            0 => i0 = new_i,
-            1 => i1 = new_i,
-            2 => sel = new_i,
+            0 => self.i0 = new_i,
+            1 => self.i1 = new_i,
+            2 => self.sel = new_i,
             _ => panic!("Attempted to set invalid input.")
         }
     }
@@ -59,13 +59,13 @@ impl Gate for MUX_1_2 {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit) {
-        let tmp = match circuit.lines[self.sel] {
-            HIGH => circuit.lines[self.i1],
-            LOW => circuit.lines[self.i0],
-            DISCONNECTED => DISCONNECTED
+    fn eval(&mut self, lines: &mut Vec<Line>) {
+        let tmp = match lines[self.sel] {
+            Line::High => lines[self.i1],
+            Line::Low => lines[self.i0],
+            Line::Disconnected => Line::Disconnected
         };
-        circuit.lines[self.output] = tmp;
+        lines[self.output] = tmp;
     }
 }
 
@@ -77,12 +77,12 @@ pub(crate) struct DMUX_2_2 {
 }
 
 impl DMUX_2_2 {
-    pub(crate) fn new(i0: usize, sel: usize, o0: usize, o1: usize) -> Self {
+    pub(crate) fn new() -> Self {
         DMUX_2_2 {
-            i0,
-            sel,
-            o0,
-            o1
+            i0: 0,
+            sel: 0,
+            o0: 0,
+            o1: 0
         }
     }
 }
@@ -90,16 +90,16 @@ impl DMUX_2_2 {
 impl Gate for DMUX_2_2 {
     fn get_input(&self, i: usize) -> usize {
         match i {
-            0 => i0,
-            1 => sel,
+            0 => self.i0,
+            1 => self.sel,
             _ => panic!("Invalid input.")
         }
     }
 
     fn set_input(&mut self, i: usize, new_i: usize) {
         match i {
-            0 => i0 = new_i,
-            1 => sel = new_i,
+            0 => self.i0 = new_i,
+            1 => self.sel = new_i,
             _ => panic!("Attempted to set invalid input.")
         }
     }
@@ -128,12 +128,15 @@ impl Gate for DMUX_2_2 {
         2
     }
 
-    fn eval(&self, circuit: &mut Circuit) {
-        let tmp = circuit.lines[self.i0];
-        match circuit.lines[self.sel] {
-            HIGH => circuit.lines[self.o1] = tmp,
-            LOW => circuit.lines[self.o0] = tmp,
-            DISCONNECTED => DISCONNECTED
+    fn eval(&mut self, lines: &mut Vec<Line>) {
+        let tmp = lines[self.i0];
+        match lines[self.sel] {
+            Line::High => lines[self.o1] = tmp,
+            Line::Low => lines[self.o0] = tmp,
+            Line::Disconnected => {
+                lines[self.o0] = Line::Disconnected;
+                lines[self.o1] = Line::Disconnected;
+            }
         };
     }
 }

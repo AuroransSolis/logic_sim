@@ -5,6 +5,22 @@ pub(crate) struct Source {
     output: usize
 }
 
+impl Source {
+    pub(crate) fn new_low() -> Self {
+        Source {
+            source: Line::Low,
+            output: 0
+        }
+    }
+
+    pub(crate) fn new_high() -> Self {
+        Source {
+            source: Line::High,
+            output: 0
+        }
+    }
+}
+
 impl Gate for Source {
     fn get_input(&self, _i: usize) -> usize {
         panic!("Sources have no inputs.");
@@ -36,8 +52,8 @@ impl Gate for Source {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit) {
-        circuit.lines[self.output] = self.source;
+    fn eval(&mut self, lines: &mut Vec<Line>) {
+        lines[self.output] = self.source;
     }
 }
 
@@ -48,17 +64,11 @@ pub(crate) struct Sink {
 
 impl Gate for Sink {
     fn get_input(&self, _i: usize) -> usize {
-        match o {
-            0 => self.output,
-            _ => panic!("Invalid input.")
-        }
+        self.i0
     }
 
-    fn set_input(&mut self, _i: usize, _new_i: usize) {
-        match o {
-            0 => self.output = new_o,
-            _ => panic!("Attempting to set invalid output.")
-        }
+    fn set_input(&mut self, _i: usize, new_i: usize) {
+        self.i0 = new_i;
     }
 
     fn num_inputs(&self) -> usize {
@@ -77,7 +87,8 @@ impl Gate for Sink {
         0
     }
 
-    fn eval(&self, circuit: &mut Circuit) {
-        unsafe { *(&self.sink as *const Line) } = circuit.lines[self.output];
+    fn eval(&mut self, lines: &mut Vec<Line>) {
+        let tmp = lines[self.i0];
+        self.sink = tmp;
     }
 }

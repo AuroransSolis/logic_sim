@@ -5,8 +5,7 @@ use std::cmp::Ordering;
 use circuit::gate::Gate;
 use circuit::line::Line;
 
-#[derive(Debug)]
-pub(crate) struct Circuit {
+pub struct Circuit {
     pub(crate) gates: Vec<Box<dyn Gate>>,
     pub(crate) lines: Vec<Line>,
     pub(crate) inputs: Vec<usize>,
@@ -23,7 +22,7 @@ impl Circuit {
         }
     }
 
-    pub(crate) fn add_gate<T: Gate>(&mut self, mut gate: T) -> usize {
+    pub(crate) fn add_gate<T: Gate + 'static>(&mut self, mut gate: T) -> usize {
         for i in 0..gate.num_inputs() {
             gate.set_input(i, 0);
         }
@@ -33,6 +32,24 @@ impl Circuit {
         }
         self.gates.push(Box::new(gate));
         self.gates.len() - 1
+    }
+
+    pub(crate) fn add_line(&mut self, line: Line) -> usize {
+        self.lines.push(line);
+        self.lines.len() - 1
+    }
+
+    pub(crate) fn set_line(&mut self, line: usize, state: Line) {
+        self.lines[line] = state;
+    }
+
+    pub(crate) fn set_gate_input(&mut self, target_gate: usize, target_gate_input: usize,
+        line: usize) {
+        self.gates[target_gate].set_input(target_gate_input, line);
+    }
+
+    pub(crate) fn get_line_state(&self, target_line: usize) -> Line {
+        self.lines[target_line]
     }
 
     pub(crate) fn connect_i_single(&mut self, target_gate: usize, target_gate_input: usize,
@@ -46,12 +63,12 @@ impl Circuit {
     }
 
     pub(crate) fn eval_single_gate(&mut self, g: usize) {
-        self.gates[g].eval(&mut self);
+        self.gates[g].eval(&mut self.lines);
     }
 
     pub(crate) fn eval(&mut self) {
         for gate in &mut self.gates {
-            gate.eval(&mut self)
+            gate.eval(&mut self.lines)
         }
     }
 
@@ -64,7 +81,7 @@ impl Circuit {
     pub(crate) fn eval_n_evals_per_gate(&mut self, evals: usize) {
         for gate in &mut self.gates {
             for _ in 0..evals {
-                gate.eval(&mut self);
+                gate.eval(&mut self.lines);
             }
         }
     }

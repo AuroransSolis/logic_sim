@@ -1,4 +1,4 @@
-use circuit::line::{Line, HIGH, LOW, DISCONNECTED, not, and, or, xor, nand, nor, xnor};
+use circuit::line::{Line, not, and, or, xor, nand, nor, xnor};
 use circuit::circuit::Circuit;
 use circuit::gate::Gate;
 
@@ -10,57 +10,57 @@ pub(crate) struct SimpleGate {
 }
 
 impl SimpleGate {
-    pub(crate) fn and(i0: usize, i1: usize, output: usize) -> Self {
+    pub(crate) fn and() -> Self {
         SimpleGate {
-            i0,
-            i1,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| and(i0, i1),
-            output
+            output: 0
         }
     }
 
-    pub(crate) fn or(i0: usize, i1: usize, output: usize) -> Self {
+    pub(crate) fn or() -> Self {
         SimpleGate {
-            i0,
-            i1,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| or(i0, i1),
-            output
+            output: 0
         }
     }
 
-    pub(crate) fn xor(i0: usize, i1: usize, output: usize) -> Self {
+    pub(crate) fn xor() -> Self {
         SimpleGate {
-            i0,
-            i1,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| xor(i0, i1),
-            output
+            output: 0
         }
     }
 
     pub(crate) fn nand() -> Self {
         SimpleGate {
-            i0: usize,
-            i1: usize,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| nand(i0, i1),
-            output: usize
+            output: 0
         }
     }
 
     pub(crate) fn nor() -> Self {
         SimpleGate {
-            i0: usize,
-            i1: usize,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| nor(i0, i1),
-            output: usize
+            output: 0
         }
     }
 
     pub(crate) fn xnor() -> Self {
         SimpleGate {
-            i0: usize,
-            i1: usize,
+            i0: 0,
+            i1: 0,
             function: |i0, i1| xnor(i0, i1),
-            output: usize
+            output: 0
         }
     }
 }
@@ -104,8 +104,8 @@ impl Gate for SimpleGate {
         1
     }
 
-    fn eval(&self, circuit: &mut Circuit) {
-        let tmp = self.function(circuit.lines[self.i0], circuit.lines[self.i1]);
-        circuit.lines[self.output] = tmp;
+    fn eval(&mut self, lines: &mut Vec<Line>) {
+        let tmp = (self.function)(lines[self.i0], lines[self.i1]);
+        lines[self.output] = tmp;
     }
 }
