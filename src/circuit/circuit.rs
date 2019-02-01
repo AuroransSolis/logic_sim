@@ -35,6 +35,39 @@ impl Circuit {
         self.lines.len() - 1
     }
 
+    pub(crate) fn mark_line_as_circuit_input(&mut self, line: usize) -> usize {
+        self.inputs.push(line);
+        self.inputs.len() - 1
+    }
+
+    pub(crate) fn unmark_line_as_circuit_input(&mut self, line: usize) {
+        if let Some(ind) = self.inputs.iter().position(|&input| input == line) {
+            self.inputs.remove(ind);
+        }
+    }
+
+    pub(crate) fn get_circuit_input(&self, input: usize) -> Line {
+        self.lines[self.inputs[input]]
+    }
+
+    pub(crate) fn set_circuit_input(&mut self, input: usize, state: Line) {
+        self.lines[self.inputs[input]] = state;
+    }
+
+    pub(crate) fn mark_line_as_circuit_output(&mut self, line: usize) {
+        self.outputs.push(line);
+    }
+
+    pub(crate) fn unmark_line_as_circuit_output(&mut self, line: usize) {
+        if let Some(ind) = self.outputs.iter().position(|&output| output == line) {
+            self.outputs.remove(ind);
+        }
+    }
+
+    pub(crate) fn get_circuit_output(&self, output: usize) -> Line {
+        self.lines[self.outputs[output]]
+    }
+
     pub(crate) fn get_gate_input(&self, target_gate: usize, target_gate_input: usize) -> usize {
         self.gates[target_gate].get_input(target_gate_input)
     }
@@ -64,6 +97,10 @@ impl Circuit {
 
     pub(crate) fn disconnect_i_single(&mut self, target_gate: usize, target_gate_input: usize) {
         self.gates[target_gate].set_input(target_gate_input, 0);
+    }
+
+    pub(crate) fn get_gate_ref(&self, target_gate: usize) -> &Box<dyn Gate> {
+        &self.gates[target_gate]
     }
 
     pub(crate) fn eval_single_gate(&mut self, g: usize) {

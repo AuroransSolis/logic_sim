@@ -65,11 +65,13 @@ fn bench_mux16_8w(c: &mut Criterion) {
     let mux = circuit.add_gate(MUX16_8W::new());
     let mut inputs = Vec::new();
     for _ in 0..128 {
-        inputs.push(circuit.add_line(Line::Low));
+        let tmp = circuit.add_line(Line::Low);
+        inputs.push(circuit.mark_line_as_circuit_input(tmp));
     }
     let mut controls = Vec::new();
     for _ in 0..3 {
-        controls.push(circuit.add_line(Line::Low));
+        let tmp = circuit.add_line(Line::Low);
+        controls.push(circuit.mark_line_as_circuit_input(tmp));
     }
     for i in 0..128 {
         circuit.set_gate_input(mux, i, inputs[i]);
@@ -79,10 +81,10 @@ fn bench_mux16_8w(c: &mut Criterion) {
     }
     let mut counter = 0;
     c.bench_function("MUX gate", move |b| b.iter(|| {
-        let tmp = circuit.get_line_state(inputs[counter % 128]);
-        circuit.set_line(inputs[counter % 128], !tmp);
+        let tmp = circuit.get_circuit_input(counter % 128);
+        circuit.set_circuit_input(counter % 128, !tmp);
         for i in 0..3 {
-            circuit.set_line(controls[i], (counter >> i & 1 == 1).into());
+            circuit.set_circuit_input(128 + i, (counter >> i & 1 == 1).into());
         };
         circuit.eval();
         counter += 1;
@@ -112,33 +114,29 @@ fn bench_mux16_8w_const(c: &mut Criterion) {
 fn bench_ram_8(c: &mut Criterion) {
     let mut circuit = Circuit::new();
     let mem = circuit.add_gate(MSFFRAM8::new());
-    let mut addr = [0; 8];
-    for i in 0..8 {
-        addr[i] = circuit.add_line(Line::Low);
-        circuit.set_gate_input(mem, i, addr[i]);
+    for output in (0..circuit.get_gate_ref(mem).num_outputs())
+        .map(|i| circuit.get_gate_output(mem, i)).collect::<Vec<_>>() {
+        circuit.mark_line_as_circuit_output(output);
     }
-    let mut write_val = [0; 8];
-    for i in 8..16 {
-        write_val[i - 8] = circuit.add_line(Line::Low);
-        circuit.set_gate_input(mem, i, write_val[i - 8]);
+    for _ in 0..19 {
+        let tmp = circuit.add_line(Line::Low);
+        circuit.mark_line_as_circuit_input(tmp);
+        circuit.set_gate_input(mem, i, tmp);
     }
-    let write = circuit.add_line(Line::Low);
-    let read = circuit.add_line(Line::Low);
-    let clock = circuit.add_line(Line::Low);
     let mut counter = 0;
     c.bench_function("Memory module WHRHCH", move |b| b.iter(|| {
-        let tmp = circuit.get_line_state(addr[counter % 8]);
-        circuit.set_line(addr[counter % 8], !tmp);
-        let tmp = circuit.get_line_state(write_val[7 - (counter % 8)]);
-        circuit.set_line(write_val[7 - (counter % 8)], !tmp);
-        circuit.set_line(write, Line::High);
-        circuit.set_line(clock, Line::High);
+        let tmp = circuit.get_circuit_input(addr[counter % 8]);
+        circuit.set_circuit_input(counter % 8, !tmp);
+        let tmp = circuit.get_circuit_input(8 + (7 - counter % 8));
+        circuit.set_circuit_input(8 + (7 - (counter % 8)), !tmp);
+        circuit.set_circuit_input(16, Line::High);
+        circuit.set_circuit_input(18, Line::High);
         circuit.eval();
-        circuit.set_line(write, Line::Low);
-        circuit.set_line(clock, Line::Low);
-        circuit.set_line(read, Line::High);
+        circuit.set_circuit_input(16, Line::Low);
+        circuit.set_circuit_input(18, Line::Low);
+        circuit.set_circuit_input(17, Line::High);
         circuit.eval();
-        circuit.set_line(read, Line::Low);
+        circuit.set_circuit_input(17, Line::Low);
         circuit.eval();
         counter += 1;
     }));
@@ -147,19 +145,15 @@ fn bench_ram_8(c: &mut Criterion) {
 fn bench_ram_8_const(c: &mut Criterion) {
     let mut circuit = Circuit::new();
     let mem = circuit.add_gate(MSFFRAM8::new());
-    let mut addr = [0; 8];
-    for i in 0..8 {
-        addr[i] = circuit.add_line(Line::Low);
-        circuit.set_gate_input(mem, i, addr[i]);
+    for output in (0..circuit.get_gate_ref(mem).num_outputs())
+        .map(|i| circuit.get_gate_output(mem, i)).collect::<Vec<_>>() {
+        circuit.mark_line_as_circuit_output(output);
     }
-    let mut write_val = [0; 8];
-    for i in 8..16 {
-        write_val[i - 8] = circuit.add_line(Line::Low);
-        circuit.set_gate_input(mem, i, write_val[i - 8]);
+    for _ in 0..19 {
+        let tmp = circuit.add_line(Line::Low);
+        circuit.mark_line_as_circuit_input(tmp);
+        circuit.set_gate_input(mem, i, tmp);
     }
-    let _write = circuit.add_line(Line::Low);
-    let _read = circuit.add_line(Line::Low);
-    let _clock = circuit.add_line(Line::Low);
     c.bench_function("Memory module WHRHCH (const)", move |b| b.iter(|| black_box(circuit.eval())));
 }
 
@@ -203,11 +197,15 @@ fn bench_mux16_8w_gates(c: &mut Criterion) {
     }
     controls[1] = circuit.add_line(Line::Low);
     for mux in &second_layer_muxes {
-        circuit.set_gate_input(*mux, 2, controls[0]);
+        circuit.set_gate_input(*mux, 2, controls[1]);
     }
     controls[2] = circuit.add_line(Line::Low);
     for mux in &first_layer_muxes {
-        circuit.set_gate_input(*mux, 2, controls[0]);
+        let tmp0 = circuit.get_gate_input(*mux, 0);
+        let tmp1 = circuit.get_gate_input(*mux, 1);
+        circuit.mark_line_as_circuit_input(tmp0);
+        circuit.mark_line_as_circuit_input(tmp1);
+        circuit.set_gate_input(*mux, 2, controls[2]);
     }
     let mut inputs = [0; 128];
     for i in 0..8 {
@@ -217,9 +215,15 @@ fn bench_mux16_8w_gates(c: &mut Criterion) {
             circuit.set_gate_input(first_layer_muxes[j * 4 + i / 2], i % 2, new_line);
         }
     }
+    for input in &inputs {
+        let foo = circuit.mark_line_as_circuit_input(*input);
+    }
+    for control in &controls {
+        circuit.mark_line_as_circuit_input(*control);
+    }
     let mut counter = 0;
     c.bench_function("MUX gate of `Gate`s", move |b| b.iter(|| {
-        let tmp = circuit.get_line_state(inputs[counter % 128]);
+        let tmp = circuit.get_circuit_input(inputs[counter % 128]);
         circuit.set_line(inputs[counter % 128], !tmp);
         for i in 0..3 {
             circuit.set_line(controls[i], (counter >> i & 1 == 1).into());
@@ -436,7 +440,7 @@ use std::time::Duration;
 
 criterion_group!{
     name = logic_benches;
-    config = Criterion::default().sample_size(10_000).measurement_time(Duration::from_secs(60));
+    config = Criterion::default().sample_size(1000).measurement_time(Duration::from_secs(60));
     targets = bench_mux16_8w, bench_mux16_8w_const, bench_ram_8, bench_ram_8_const,
         bench_mux16_8w_gates, bench_mux16_8w_gates_const, bench_mux16_8w_conditionless,
         bench_mux16_8w_conditionless_const, bench_ram8_of_gates, bench_ram8_of_gates_const
