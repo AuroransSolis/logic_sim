@@ -35,9 +35,8 @@ impl Circuit {
         self.lines.len() - 1
     }
 
-    pub(crate) fn mark_line_as_circuit_input(&mut self, line: usize) -> usize {
+    pub(crate) fn mark_line_as_circuit_input(&mut self, line: usize) {
         self.inputs.push(line);
-        self.inputs.len() - 1
     }
 
     pub(crate) fn unmark_line_as_circuit_input(&mut self, line: usize) {

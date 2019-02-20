@@ -3,6 +3,17 @@
 #[macro_use] extern crate criterion;
 
 use criterion::{Criterion, black_box};
+use std::time::Duration;
+
+criterion_group!{
+    name = logic_benches;
+    config = Criterion::default().sample_size(1000).measurement_time(Duration::from_secs(60));
+    targets = bench_mux16_8w, bench_mux16_8w_const, bench_ram_8, bench_ram_8_const,
+        bench_mux16_8w_gates, bench_mux16_8w_gates_const, bench_mux16_8w_conditionless,
+        bench_mux16_8w_conditionless_const, bench_ram8_of_gates, bench_ram8_of_gates_const
+}
+
+criterion_main!{logic_benches}
 
 pub mod circuit;
 
@@ -66,12 +77,14 @@ fn bench_mux16_8w(c: &mut Criterion) {
     let mut inputs = Vec::new();
     for _ in 0..128 {
         let tmp = circuit.add_line(Line::Low);
-        inputs.push(circuit.mark_line_as_circuit_input(tmp));
+        inputs.push(tmp);
+        circuit.mark_line_as_circuit_input(tmp);
     }
     let mut controls = Vec::new();
     for _ in 0..3 {
         let tmp = circuit.add_line(Line::Low);
-        controls.push(circuit.mark_line_as_circuit_input(tmp));
+        controls.push(tmp);
+        circuit.mark_line_as_circuit_input(tmp);
     }
     for i in 0..128 {
         circuit.set_gate_input(mux, i, inputs[i]);
@@ -118,17 +131,17 @@ fn bench_ram_8(c: &mut Criterion) {
         .map(|i| circuit.get_gate_output(mem, i)).collect::<Vec<_>>() {
         circuit.mark_line_as_circuit_output(output);
     }
-    for _ in 0..19 {
+    for i in 0..19 {
         let tmp = circuit.add_line(Line::Low);
         circuit.mark_line_as_circuit_input(tmp);
         circuit.set_gate_input(mem, i, tmp);
     }
     let mut counter = 0;
     c.bench_function("Memory module WHRHCH", move |b| b.iter(|| {
-        let tmp = circuit.get_circuit_input(addr[counter % 8]);
+        let tmp = circuit.get_circuit_input(counter % 8);
         circuit.set_circuit_input(counter % 8, !tmp);
-        let tmp = circuit.get_circuit_input(8 + (7 - counter % 8));
-        circuit.set_circuit_input(8 + (7 - (counter % 8)), !tmp);
+        let tmp = circuit.get_circuit_input(15 - counter % 8);
+        circuit.set_circuit_input(15 - counter % 8, !tmp);
         circuit.set_circuit_input(16, Line::High);
         circuit.set_circuit_input(18, Line::High);
         circuit.eval();
@@ -149,7 +162,7 @@ fn bench_ram_8_const(c: &mut Criterion) {
         .map(|i| circuit.get_gate_output(mem, i)).collect::<Vec<_>>() {
         circuit.mark_line_as_circuit_output(output);
     }
-    for _ in 0..19 {
+    for i in 0..19 {
         let tmp = circuit.add_line(Line::Low);
         circuit.mark_line_as_circuit_input(tmp);
         circuit.set_gate_input(mem, i, tmp);
@@ -215,8 +228,8 @@ fn bench_mux16_8w_gates(c: &mut Criterion) {
             circuit.set_gate_input(first_layer_muxes[j * 4 + i / 2], i % 2, new_line);
         }
     }
-    for input in &inputs {
-        let foo = circuit.mark_line_as_circuit_input(*input);
+    for input in inputs.iter() {
+        circuit.mark_line_as_circuit_input(*input);
     }
     for control in &controls {
         circuit.mark_line_as_circuit_input(*control);
@@ -435,18 +448,6 @@ fn bench_ram8_of_gates_const(c: &mut Criterion) {
         black_box(circuit.eval());
     }));
 }
-
-use std::time::Duration;
-
-criterion_group!{
-    name = logic_benches;
-    config = Criterion::default().sample_size(1000).measurement_time(Duration::from_secs(60));
-    targets = bench_mux16_8w, bench_mux16_8w_const, bench_ram_8, bench_ram_8_const,
-        bench_mux16_8w_gates, bench_mux16_8w_gates_const, bench_mux16_8w_conditionless,
-        bench_mux16_8w_conditionless_const, bench_ram8_of_gates, bench_ram8_of_gates_const
-}
-
-criterion_main!{logic_benches}
 
 use circuit::simplegate::SimpleGate;
 use circuit::basics::Inverter;

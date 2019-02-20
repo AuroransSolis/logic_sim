@@ -276,7 +276,11 @@ impl Gate for MSFFRAM8 {
             }
         } else if lines[self.inputs[18]].is_low() && !self.storage[self.storage.len() - 1] {
             let (masters, slaves) = self.storage.split_at_mut(256 * 8);
-            slaves.copy_from_slice(&*masters);
+            {
+                let range = 0..slaves.len() - 1;
+                let slaves = &mut slaves[range];
+                slaves.copy_from_slice(&*masters);
+            }
             let last = slaves.len() - 1;
             slaves[last] = true;
         }
