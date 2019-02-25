@@ -154,7 +154,7 @@ impl Gate for MasterSlaveFlipFlop {
 /// 17: read
 /// 18: clock
 pub struct NORLatchRAM8 {
-    inputs: [usize; 18],
+    inputs: [usize; 19],
     storage: [bool; 256 * 8],
     outputs: [usize; 8]
 }
@@ -162,7 +162,7 @@ pub struct NORLatchRAM8 {
 impl NORLatchRAM8 {
     fn new() -> Self {
         NORLatchRAM8 {
-            inputs: [0; 18],
+            inputs: [0; 19],
             storage: [false; 256 * 8],
             outputs: [0; 8]
         }
@@ -179,7 +179,7 @@ impl Gate for NORLatchRAM8 {
     }
 
     fn num_inputs(&self) -> usize {
-        18
+        19
     }
 
     fn get_output(&self, o: usize) -> usize {

@@ -20,7 +20,7 @@ impl PartialEq for Line {
     }
 }
 
-pub(crate) fn not(l0: Line) -> Line {
+pub fn not(l0: Line) -> Line {
     match l0 {
         Line::High => Line::Low,
         _ => Line::High
@@ -28,7 +28,7 @@ pub(crate) fn not(l0: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn and(l0: Line, l1: Line) -> Line {
+pub fn and(l0: Line, l1: Line) -> Line {
     match (l0, l1) {
         (Line::High, Line::High) => Line::High,
         _ => Line::Low
@@ -36,7 +36,7 @@ pub(crate) fn and(l0: Line, l1: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn or(l0: Line, l1: Line) -> Line {
+pub fn or(l0: Line, l1: Line) -> Line {
     match (l0, l1) {
         (Line::High, _) | (_, Line::High) => Line::High,
         _ => Line::Low
@@ -44,7 +44,7 @@ pub(crate) fn or(l0: Line, l1: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn xor(l0: Line, l1: Line) -> Line {
+pub fn xor(l0: Line, l1: Line) -> Line {
     match l0 {
         Line::High => not(l1),
         Line::Low | Line::Disconnected => l1
@@ -52,7 +52,7 @@ pub(crate) fn xor(l0: Line, l1: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn nand(l0: Line, l1: Line) -> Line {
+pub fn nand(l0: Line, l1: Line) -> Line {
     match (l0, l1) {
         (Line::High, Line::High) => Line::Low,
         _ => Line::High
@@ -60,7 +60,7 @@ pub(crate) fn nand(l0: Line, l1: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn nor(l0: Line, l1: Line) -> Line {
+pub fn nor(l0: Line, l1: Line) -> Line {
     match (l0, l1) {
         (Line::High, _) | (_, Line::High) => Line::Low,
         _ => Line::High
@@ -68,7 +68,7 @@ pub(crate) fn nor(l0: Line, l1: Line) -> Line {
 }
 
 #[inline]
-pub(crate) fn xnor(l0: Line, l1: Line) -> Line {
+pub fn xnor(l0: Line, l1: Line) -> Line {
     match l0 {
         Line::High => l1,
         Line::Low | Line::Disconnected => not(l1)
@@ -76,21 +76,21 @@ pub(crate) fn xnor(l0: Line, l1: Line) -> Line {
 }
 
 impl Line {
-    pub(crate) fn is_high(&self) -> bool {
+    pub fn is_high(&self) -> bool {
         match self {
             &Line::High => true,
             _ => false
         }
     }
 
-    pub(crate) fn is_low(&self) -> bool {
+    pub fn is_low(&self) -> bool {
         match self {
             &Line::Low => true,
             _ => false
         }
     }
 
-    pub(crate) fn is_disconnected(&self) -> bool {
+    pub fn is_disconnected(&self) -> bool {
         match self {
             &Line::Disconnected => true,
             _ => false

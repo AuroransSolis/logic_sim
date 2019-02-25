@@ -1,7 +1,7 @@
 use circuit::line::{Line, and, or, xor, nand, nor, xnor};
 use circuit::gate::Gate;
 
-pub(crate) struct SimpleGate {
+pub struct SimpleGate {
     i0: usize,
     i1: usize,
     function: fn(Line, Line) -> Line,
@@ -9,7 +9,7 @@ pub(crate) struct SimpleGate {
 }
 
 impl SimpleGate {
-    pub(crate) fn and() -> Self {
+    pub fn and() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,
@@ -18,7 +18,7 @@ impl SimpleGate {
         }
     }
 
-    pub(crate) fn or() -> Self {
+    pub fn or() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,
@@ -27,7 +27,7 @@ impl SimpleGate {
         }
     }
 
-    pub(crate) fn xor() -> Self {
+    pub fn xor() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,
@@ -36,7 +36,7 @@ impl SimpleGate {
         }
     }
 
-    pub(crate) fn nand() -> Self {
+    pub fn nand() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,
@@ -45,7 +45,7 @@ impl SimpleGate {
         }
     }
 
-    pub(crate) fn nor() -> Self {
+    pub fn nor() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,
@@ -54,7 +54,7 @@ impl SimpleGate {
         }
     }
 
-    pub(crate) fn xnor() -> Self {
+    pub fn xnor() -> Self {
         SimpleGate {
             i0: 0,
             i1: 0,

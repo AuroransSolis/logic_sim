@@ -4,14 +4,23 @@ version = "0.1.0"
 authors = ["AuroransSolis <primalucegd@gmail.com>"]
 
 [dependencies]
+azul = { git = "https://github.com/maps4print/azul", rev = "87d85a70176a8b0e6cbd516f7cb246238c371611" }
 
 [dev-dependencies]
 criterion = "0.2.7"
 
+[lib]
+name = "logic"
+path = "logic/lib.rs"
+
+[[bin]]
+name = "gui"
+path = "gui/main.rs"
+
 [[bench]]
 name = "logic_bench"
 harness = false
-path = "src/logic_bench.rs"
+path = "logic/logic_bench.rs"
 
 [profile.release]
 opt-level = 3
